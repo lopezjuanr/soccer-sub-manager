@@ -305,6 +305,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           state.settings
         );
         dispatch({ type: "OPEN_SUB_DIALOG", window: w.id, recs });
+        // Vibrate to alert the coach even if they're watching the field
+        if (typeof navigator !== "undefined" && navigator.vibrate) {
+          navigator.vibrate([300, 100, 300]);
+        }
         break;
       }
     }

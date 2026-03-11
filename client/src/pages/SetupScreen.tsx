@@ -1,27 +1,152 @@
 /**
- * SetupScreen — Roster entry
+ * SetupScreen — Roster entry with drag-to-reorder
  * Design: Clean Coach's App — near-black bg, electric lime accents, Space Grotesk + DM Sans
  * Game duration is fixed at 40 minutes (each player must play at least 20 min)
+ * First 4 players in the list start on the field — drag to control who starts
  */
 
 import { useState, useRef } from "react";
 import { useGame } from "@/contexts/GameContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { UserPlus, Trash2, Play, Users } from "lucide-react";
+import { UserPlus, Trash2, Play, Users, GripVertical } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Player } from "@/lib/gameEngine";
 
 const FIELD_BG =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663410153353/hocftoyG92dtZTVjDuaoFF/soccer-field-hero-fTHV8xXiyDewPsmcu5yyN3.webp";
 
+// ── Sortable player row ──────────────────────────────────────────────────────
+
+function SortablePlayerRow({
+  player,
+  index,
+  onRemove,
+}: {
+  player: Player;
+  index: number;
+  onRemove: (id: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: player.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  const isStarter = index < 4;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 rounded-xl px-3 py-3 border transition-colors ${
+        isDragging
+          ? "bg-white/12 border-[#a3e635]/40 shadow-lg"
+          : isStarter
+          ? "bg-white/6 border-white/8"
+          : "bg-white/3 border-white/5"
+      }`}
+    >
+      {/* Drag handle */}
+      <button
+        {...attributes}
+        {...listeners}
+        className="text-white/25 hover:text-white/60 transition-colors touch-none p-1 -ml-1 cursor-grab active:cursor-grabbing"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical size={16} />
+      </button>
+
+      {/* Position number */}
+      <span
+        className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${
+          isStarter
+            ? "bg-[#a3e635]/15 text-[#a3e635]"
+            : "bg-white/8 text-white/30"
+        }`}
+        style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+      >
+        {index + 1}
+      </span>
+
+      {/* Name */}
+      <span
+        className={`flex-1 font-medium text-sm ${isStarter ? "text-white" : "text-white/60"}`}
+        style={{ fontFamily: "'DM Sans', sans-serif" }}
+      >
+        {player.name}
+      </span>
+
+      {/* Starts badge */}
+      {isStarter && (
+        <span className="text-[10px] text-[#a3e635] font-semibold bg-[#a3e635]/10 px-2 py-0.5 rounded-full shrink-0">
+          STARTS
+        </span>
+      )}
+
+      {/* Delete */}
+      <button
+        onClick={() => onRemove(player.id)}
+        className="text-white/25 hover:text-red-400 transition-colors p-1 shrink-0"
+      >
+        <Trash2 size={15} />
+      </button>
+    </div>
+  );
+}
+
+// ── Main screen ──────────────────────────────────────────────────────────────
+
 export default function SetupScreen() {
-  const { state, addPlayer, removePlayer, startGame } = useGame();
+  const { state, addPlayer, removePlayer, startGame, dispatch } = useGame();
   const [nameInput, setNameInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const players = state.players;
   const canStart = players.length >= 5 && players.length <= 7;
+
+  // dnd-kit sensors — support both mouse and touch with a small activation distance
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = players.findIndex((p) => p.id === active.id);
+    const newIndex = players.findIndex((p) => p.id === over.id);
+    const reordered = arrayMove(players, oldIndex, newIndex);
+    dispatch({ type: "SET_ROSTER", players: reordered });
+  }
 
   function handleAddPlayer() {
     const name = nameInput.trim();
@@ -129,54 +254,57 @@ export default function SetupScreen() {
             </Button>
           </div>
 
-          {/* Player list */}
-          <div className="space-y-2">
-            <AnimatePresence>
-              {players.map((player, index) => (
-                <motion.div
-                  key={player.id}
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex items-center gap-3 bg-white/6 rounded-xl px-4 py-3 border border-white/8"
-                >
-                  <span
-                    className="w-8 h-8 rounded-lg bg-[#a3e635]/15 text-[#a3e635] text-sm font-bold flex items-center justify-center shrink-0"
-                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  >
-                    {index + 1}
-                  </span>
-                  <span
-                    className="flex-1 text-white font-medium"
+          {/* Drag hint */}
+          {players.length >= 2 && (
+            <p
+              className="text-white/30 text-xs mb-3 flex items-center gap-1"
+              style={{ fontFamily: "'DM Sans', sans-serif" }}
+            >
+              <GripVertical size={11} />
+              Drag to reorder — top 4 start on the field
+            </p>
+          )}
+
+          {/* Sortable player list */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={players.map((p) => p.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-2">
+                <AnimatePresence>
+                  {players.map((player, index) => (
+                    <motion.div
+                      key={player.id}
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <SortablePlayerRow
+                        player={player}
+                        index={index}
+                        onRemove={removePlayer}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+
+                {players.length === 0 && (
+                  <div
+                    className="text-center py-8 text-white/30 text-sm"
                     style={{ fontFamily: "'DM Sans', sans-serif" }}
                   >
-                    {player.name}
-                  </span>
-                  {index < 4 && (
-                    <span className="text-[10px] text-[#a3e635] font-semibold bg-[#a3e635]/10 px-2 py-0.5 rounded-full">
-                      STARTS
-                    </span>
-                  )}
-                  <button
-                    onClick={() => removePlayer(player.id)}
-                    className="text-white/30 hover:text-red-400 transition-colors p-1"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-
-            {players.length === 0 && (
-              <div
-                className="text-center py-8 text-white/30 text-sm"
-                style={{ fontFamily: "'DM Sans', sans-serif" }}
-              >
-                Add 5–7 players to get started
+                    Add 5–7 players to get started
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </SortableContext>
+          </DndContext>
 
           {players.length > 0 && players.length < 5 && (
             <p
