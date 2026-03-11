@@ -14,8 +14,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Pause,
-  Play,
   ArrowLeftRight,
   Flag,
   ChevronRight,
@@ -271,25 +269,8 @@ export default function GameScreen() {
         {/* Timer controls */}
         <div className="flex gap-2 mt-3">
           <Button
-            onClick={() =>
-              dispatch({ type: isRunning ? "PAUSE" : "RESUME" })
-            }
-            className={`flex-1 h-10 rounded-xl font-semibold text-sm ${
-              isRunning
-                ? "bg-white/10 hover:bg-white/15 text-white"
-                : "bg-[#a3e635] hover:bg-[#84cc16] text-[#0d1117]"
-            }`}
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            {isRunning ? (
-              <><Pause size={16} className="mr-1.5" /> Pause</>
-            ) : (
-              <><Play size={16} className="mr-1.5" /> Resume</>
-            )}
-          </Button>
-          <Button
             onClick={() => setManualSubOpen(true)}
-            className="h-10 px-4 rounded-xl bg-white/8 hover:bg-white/15 text-white text-sm font-semibold"
+            className="flex-1 h-10 rounded-xl bg-white/8 hover:bg-white/15 text-white text-sm font-semibold"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             <ArrowLeftRight size={16} className="mr-1.5" />

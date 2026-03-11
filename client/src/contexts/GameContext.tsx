@@ -145,7 +145,8 @@ function reducer(state: GameState, action: Action): GameState {
     case "OPEN_SUB_DIALOG":
       return {
         ...state,
-        isRunning: false,
+        // Only pause the clock at halftime; mid-half windows keep the clock running
+        isRunning: action.window === "halftime" ? false : state.isRunning,
         subDialogOpen: true,
         activeWindow: action.window,
         pendingRecs: action.recs,
@@ -179,6 +180,7 @@ function reducer(state: GameState, action: Action): GameState {
         completedWindows: [...state.completedWindows, action.window],
         subDialogOpen: false,
         activeWindow: null,
+        // Always ensure clock is running when dismissing a sub window
         isRunning: true,
       };
     }
