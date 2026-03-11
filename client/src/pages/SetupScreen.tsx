@@ -92,12 +92,12 @@ export default function SetupScreen() {
               Game Duration
             </h2>
           </div>
-          <div className="grid grid-cols-4 gap-2">
-            {[32, 40, 48, 60].map((min) => (
+          <div className="grid grid-cols-2 gap-3">
+            {[40, 50].map((min) => (
               <button
                 key={min}
                 onClick={() => setDuration(min)}
-                className={`py-3 rounded-xl text-sm font-bold transition-all ${
+                className={`py-4 rounded-xl text-base font-bold transition-all ${
                   totalMinutes === min
                     ? "bg-[#a3e635] text-[#0d1117]"
                     : "bg-white/8 text-white/60 hover:bg-white/15"
