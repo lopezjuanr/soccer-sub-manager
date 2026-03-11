@@ -153,21 +153,36 @@ function reducer(state: GameState, action: Action): GameState {
     }
 
     case "SKIP_TO_NEXT_WINDOW": {
-      // Find the next sub window that hasn't been completed yet
       const totalSec = state.settings.totalMinutes * 60;
       const windows = [
         { id: "mid-first" as SubWindow, sec: totalSec * 0.25 },
         { id: "halftime" as SubWindow, sec: totalSec * 0.5 },
         { id: "mid-second" as SubWindow, sec: totalSec * 0.75 },
       ];
+      // Find the next sub window that hasn't been completed and is still ahead
       const next = windows.find(
         (w) =>
           !state.completedWindows.includes(w.id) &&
           state.elapsedSeconds < w.sec
       );
-      if (!next) return state;
-      // Jump clock to 1 second before the window so the useEffect triggers it
-      return { ...state, elapsedSeconds: Math.floor(next.sec) };
+      if (next) {
+        // Jump clock to that window so the useEffect triggers it
+        return { ...state, elapsedSeconds: Math.floor(next.sec) };
+      }
+      // No more sub windows — skip to end of game
+      const elapsed = totalSec / 60;
+      const players = state.players.map((p) => {
+        if (p.status === "on" && p.lastOnAt !== null) {
+          return {
+            ...p,
+            minutesPlayed: effectiveMinutes(p, elapsed),
+            status: "off" as const,
+            lastOnAt: null,
+          };
+        }
+        return p;
+      });
+      return { ...state, screen: "summary", isRunning: false, players };
     }
 
     case "END_GAME": {
