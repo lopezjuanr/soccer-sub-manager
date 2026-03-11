@@ -359,7 +359,7 @@ export default function GameScreen() {
             </p>
           </div>
 
-          <div className="px-5 py-4 space-y-3">
+          <div className="px-5 py-4 space-y-4">
             {pendingRecs.length === 0 ? (
               <div className="text-center py-4">
                 <CheckCircle2 size={32} className="text-[#a3e635] mx-auto mb-2" />
@@ -371,74 +371,105 @@ export default function GameScreen() {
                 </p>
               </div>
             ) : (
-              pendingRecs.map((rec, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="bg-white/5 rounded-xl p-4 border border-white/8"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="w-2 h-2 rounded-full bg-red-500" />
-                        <span className="text-white/60 text-xs" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                          OUT
-                        </span>
-                        <span className="text-white font-semibold" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                          {rec.playerOut.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#a3e635]" />
-                        <span className="text-white/60 text-xs" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                          IN
-                        </span>
-                        <span className="text-white font-semibold" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                          {rec.playerIn.name}
-                        </span>
-                      </div>
-                    </div>
-                    {(() => {
-                      const key = `${rec.playerOut.id}-${rec.playerIn.id}`;
-                      const applied = appliedRecs.has(key);
-                      return (
-                        <Button
-                          onClick={() => handleApplyRec(rec.playerOut.id, rec.playerIn.id)}
-                          disabled={applied}
-                          className={`h-9 px-4 rounded-xl text-sm font-bold shrink-0 transition-all ${
-                            applied
-                              ? "bg-white/10 text-white/40 cursor-not-allowed"
-                              : "bg-[#a3e635] hover:bg-[#84cc16] text-[#0d1117]"
-                          }`}
+              <>
+                {/* Coming OUT section */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
+                    <span
+                      className="text-red-400 text-xs font-bold uppercase tracking-widest"
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      Coming Out
+                    </span>
+                  </div>
+                  <div className="bg-red-500/8 border border-red-500/15 rounded-xl px-4 py-3 space-y-2">
+                    {pendingRecs.map((rec, i) => (
+                      <motion.div
+                        key={`out-${i}`}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.07 }}
+                        className="flex items-center gap-3"
+                      >
+                        <span
+                          className="w-6 h-6 rounded-md bg-red-500/15 text-red-400 text-xs font-bold flex items-center justify-center shrink-0"
                           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                         >
-                          {applied ? (
-                            <><CheckCircle2 size={14} className="mr-1" /> Done</>
-                          ) : (
-                            "Apply"
-                          )}
-                        </Button>
-                      );
-                    })()}
+                          {i + 1}
+                        </span>
+                        <span
+                          className="text-white font-semibold text-base"
+                          style={{ fontFamily: "'DM Sans', sans-serif" }}
+                        >
+                          {rec.playerOut.name}
+                        </span>
+                      </motion.div>
+                    ))}
                   </div>
-                  <p className="text-white/40 text-xs" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                    {rec.reason}
-                  </p>
-                </motion.div>
-              ))
+                </div>
+
+                {/* Coming IN section */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#a3e635] shrink-0" />
+                    <span
+                      className="text-[#a3e635] text-xs font-bold uppercase tracking-widest"
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      Coming In
+                    </span>
+                  </div>
+                  <div className="bg-[#a3e635]/8 border border-[#a3e635]/15 rounded-xl px-4 py-3 space-y-2">
+                    {pendingRecs.map((rec, i) => (
+                      <motion.div
+                        key={`in-${i}`}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.07 + 0.1 }}
+                        className="flex items-center gap-3"
+                      >
+                        <span
+                          className="w-6 h-6 rounded-md bg-[#a3e635]/15 text-[#a3e635] text-xs font-bold flex items-center justify-center shrink-0"
+                          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                        >
+                          {i + 1}
+                        </span>
+                        <span
+                          className="text-white font-semibold text-base"
+                          style={{ fontFamily: "'DM Sans', sans-serif" }}
+                        >
+                          {rec.playerIn.name}
+                        </span>
+                        <span
+                          className="text-white/35 text-xs ml-auto"
+                          style={{ fontFamily: "'DM Sans', sans-serif" }}
+                        >
+                          {rec.reason}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
           </div>
 
           <div className="px-5 pb-5">
             <Button
-              onClick={() => { setAppliedRecs(new Set()); completeSubWindow(); }}
-              className="w-full h-12 rounded-xl bg-white/8 hover:bg-white/15 text-white font-semibold"
+              onClick={() => {
+                // Apply all recommendations at once
+                pendingRecs.forEach((rec) => {
+                  applySubstitution(rec.playerOut.id, rec.playerIn.id);
+                });
+                setAppliedRecs(new Set());
+                completeSubWindow();
+              }}
+              className="w-full h-12 rounded-xl bg-[#a3e635] hover:bg-[#84cc16] text-[#0d1117] font-bold"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              Done — Resume Game
-              <ChevronRight size={16} className="ml-1" />
+              <CheckCircle2 size={16} className="mr-2" />
+              Apply All — Resume Game
             </Button>
           </div>
         </DialogContent>
