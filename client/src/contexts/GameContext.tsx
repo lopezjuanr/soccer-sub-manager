@@ -68,6 +68,7 @@ type Action =
   | { type: "CLOSE_SUB_DIALOG" }
   | { type: "APPLY_SUB"; playerOutId: string; playerInId: string }
   | { type: "COMPLETE_SUB_WINDOW"; window: SubWindow }
+  | { type: "SKIP_TO_NEXT_WINDOW" }
   | { type: "END_GAME" }
   | { type: "RESET" };
 
@@ -151,6 +152,24 @@ function reducer(state: GameState, action: Action): GameState {
       };
     }
 
+    case "SKIP_TO_NEXT_WINDOW": {
+      // Find the next sub window that hasn't been completed yet
+      const totalSec = state.settings.totalMinutes * 60;
+      const windows = [
+        { id: "mid-first" as SubWindow, sec: totalSec * 0.25 },
+        { id: "halftime" as SubWindow, sec: totalSec * 0.5 },
+        { id: "mid-second" as SubWindow, sec: totalSec * 0.75 },
+      ];
+      const next = windows.find(
+        (w) =>
+          !state.completedWindows.includes(w.id) &&
+          state.elapsedSeconds < w.sec
+      );
+      if (!next) return state;
+      // Jump clock to 1 second before the window so the useEffect triggers it
+      return { ...state, elapsedSeconds: Math.floor(next.sec) };
+    }
+
     case "END_GAME": {
       const elapsed = state.elapsedSeconds / 60;
       const players = state.players.map((p) => {
@@ -187,6 +206,7 @@ interface GameContextValue {
   applySubstitution: (playerOutId: string, playerInId: string) => void;
   completeSubWindow: () => void;
   dismissSubWindow: () => void;
+  skipToNextWindow: () => void;
   endGame: () => void;
   reset: () => void;
 }
@@ -292,6 +312,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.activeWindow]);
 
+  const skipToNextWindow = useCallback(
+    () => dispatch({ type: "SKIP_TO_NEXT_WINDOW" }),
+    []
+  );
   const endGame = useCallback(() => dispatch({ type: "END_GAME" }), []);
   const reset = useCallback(() => dispatch({ type: "RESET" }), []);
 
@@ -307,6 +331,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         applySubstitution,
         completeSubWindow,
         dismissSubWindow,
+        skipToNextWindow,
         endGame,
         reset,
       }}

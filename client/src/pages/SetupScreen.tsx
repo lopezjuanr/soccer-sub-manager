@@ -1,13 +1,14 @@
 /**
- * SetupScreen — Roster entry and game settings
+ * SetupScreen — Roster entry
  * Design: Clean Coach's App — near-black bg, electric lime accents, Space Grotesk + DM Sans
+ * Game duration is fixed at 40 minutes (each player must play at least 20 min)
  */
 
 import { useState, useRef } from "react";
 import { useGame } from "@/contexts/GameContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { UserPlus, Trash2, Play, Clock, Users } from "lucide-react";
+import { UserPlus, Trash2, Play, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
@@ -15,13 +16,12 @@ const FIELD_BG =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663410153353/hocftoyG92dtZTVjDuaoFF/soccer-field-hero-fTHV8xXiyDewPsmcu5yyN3.webp";
 
 export default function SetupScreen() {
-  const { state, addPlayer, removePlayer, startGame, dispatch } = useGame();
+  const { state, addPlayer, removePlayer, startGame } = useGame();
   const [nameInput, setNameInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const players = state.players;
   const canStart = players.length >= 5 && players.length <= 7;
-  const totalMinutes = state.settings.totalMinutes;
 
   function handleAddPlayer() {
     const name = nameInput.trim();
@@ -51,13 +51,6 @@ export default function SetupScreen() {
     startGame();
   }
 
-  function setDuration(min: number) {
-    dispatch({
-      type: "SET_SETTINGS",
-      settings: { ...state.settings, totalMinutes: min },
-    });
-  }
-
   return (
     <div className="min-h-screen flex flex-col bg-[#0d1117]">
       {/* Hero header */}
@@ -71,54 +64,34 @@ export default function SetupScreen() {
         <div className="relative z-10 flex flex-col items-center justify-end h-full pb-4 px-4">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[#a3e635] text-2xl">⚽</span>
-            <h1 className="text-white font-bold text-2xl tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <h1
+              className="text-white font-bold text-2xl tracking-tight"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
               Sub Manager
             </h1>
           </div>
-          <p className="text-white/60 text-sm" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-            8U · 4v4 · Fair Play Tracker
+          <p
+            className="text-white/60 text-sm"
+            style={{ fontFamily: "'DM Sans', sans-serif" }}
+          >
+            8U · 4v4 · 40-Minute Game
           </p>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 px-4 pt-4 pb-8 space-y-6">
-
-        {/* Game Duration */}
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Clock size={16} className="text-[#a3e635]" />
-            <h2 className="text-white/80 text-sm font-semibold uppercase tracking-widest" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              Game Duration
-            </h2>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {[40, 50].map((min) => (
-              <button
-                key={min}
-                onClick={() => setDuration(min)}
-                className={`py-4 rounded-xl text-base font-bold transition-all ${
-                  totalMinutes === min
-                    ? "bg-[#a3e635] text-[#0d1117]"
-                    : "bg-white/8 text-white/60 hover:bg-white/15"
-                }`}
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                {min}m
-              </button>
-            ))}
-          </div>
-          <p className="text-white/40 text-xs mt-2 text-center" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-            Each player must play at least {totalMinutes / 2} minutes
-          </p>
-        </section>
+      <div className="flex-1 px-4 pt-5 pb-8 space-y-6">
 
         {/* Roster */}
         <section>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Users size={16} className="text-[#a3e635]" />
-              <h2 className="text-white/80 text-sm font-semibold uppercase tracking-widest" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <h2
+                className="text-white/80 text-sm font-semibold uppercase tracking-widest"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
                 Roster
               </h2>
             </div>
@@ -168,7 +141,6 @@ export default function SetupScreen() {
                   transition={{ duration: 0.2 }}
                   className="flex items-center gap-3 bg-white/6 rounded-xl px-4 py-3 border border-white/8"
                 >
-                  {/* Jersey number */}
                   <span
                     className="w-8 h-8 rounded-lg bg-[#a3e635]/15 text-[#a3e635] text-sm font-bold flex items-center justify-center shrink-0"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -197,15 +169,22 @@ export default function SetupScreen() {
             </AnimatePresence>
 
             {players.length === 0 && (
-              <div className="text-center py-8 text-white/30 text-sm" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <div
+                className="text-center py-8 text-white/30 text-sm"
+                style={{ fontFamily: "'DM Sans', sans-serif" }}
+              >
                 Add 5–7 players to get started
               </div>
             )}
           </div>
 
           {players.length > 0 && players.length < 5 && (
-            <p className="text-amber-400/80 text-xs text-center mt-3" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-              Add {5 - players.length} more player{5 - players.length !== 1 ? "s" : ""} to start
+            <p
+              className="text-amber-400/80 text-xs text-center mt-3"
+              style={{ fontFamily: "'DM Sans', sans-serif" }}
+            >
+              Add {5 - players.length} more player
+              {5 - players.length !== 1 ? "s" : ""} to start
             </p>
           )}
         </section>
@@ -226,8 +205,11 @@ export default function SetupScreen() {
         </Button>
 
         {canStart && (
-          <p className="text-white/30 text-xs text-center -mt-3" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-            First 4 players start on the field
+          <p
+            className="text-white/30 text-xs text-center -mt-3"
+            style={{ fontFamily: "'DM Sans', sans-serif" }}
+          >
+            First 4 players start on the field · each must play ≥ 20 min
           </p>
         )}
       </div>

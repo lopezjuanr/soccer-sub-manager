@@ -21,7 +21,7 @@ import {
   ChevronRight,
   CheckCircle2,
   AlertTriangle,
-  Clock,
+  FastForward,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -162,6 +162,7 @@ export default function GameScreen() {
     applySubstitution,
     completeSubWindow,
     dismissSubWindow,
+    skipToNextWindow,
     endGame,
   } = useGame();
 
@@ -290,6 +291,14 @@ export default function GameScreen() {
           >
             <ArrowLeftRight size={16} className="mr-1.5" />
             Sub
+          </Button>
+          <Button
+            onClick={skipToNextWindow}
+            title="Demo: skip to next sub window"
+            className="h-10 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 text-sm font-semibold border border-amber-500/20"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            <FastForward size={15} />
           </Button>
           <Button
             onClick={() => setEndConfirmOpen(true)}
