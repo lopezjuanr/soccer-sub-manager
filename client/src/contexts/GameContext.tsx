@@ -22,6 +22,36 @@ import {
   effectiveMinutes,
 } from "@/lib/gameEngine";
 
+const ROSTER_KEY = "soccer-sub-manager-roster";
+
+function loadSavedRoster(): Player[] {
+  try {
+    const raw = localStorage.getItem(ROSTER_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as { id: string; name: string }[];
+    return parsed.map((p) => ({
+      id: p.id,
+      name: p.name,
+      minutesPlayed: 0,
+      status: "off" as const,
+      lastOnAt: null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function saveRoster(players: Player[]) {
+  try {
+    localStorage.setItem(
+      ROSTER_KEY,
+      JSON.stringify(players.map((p) => ({ id: p.id, name: p.name })))
+    );
+  } catch {
+    // ignore storage errors
+  }
+}
+
 // ─── State ───────────────────────────────────────────────────────────────────
 
 export type AppScreen = "setup" | "game" | "summary";
@@ -45,7 +75,7 @@ export interface GameState {
 
 const initialState: GameState = {
   screen: "setup",
-  players: [],
+  players: loadSavedRoster(),
   settings: DEFAULT_SETTINGS,
   elapsedSeconds: 0,
   isRunning: false,
@@ -77,6 +107,7 @@ type Action =
 function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "SET_ROSTER":
+      saveRoster(action.players);
       return { ...state, players: action.players };
 
     case "SET_SETTINGS":
@@ -201,8 +232,14 @@ function reducer(state: GameState, action: Action): GameState {
       return { ...state, screen: "summary", isRunning: false, players };
     }
 
-    case "RESET":
-      return { ...initialState };
+    case "RESET": {
+      // Restore the saved roster (stats cleared) so players persist across games
+      const savedRoster = loadSavedRoster();
+      return {
+        ...initialState,
+        players: savedRoster,
+      };
+    }
 
     default:
       return state;
