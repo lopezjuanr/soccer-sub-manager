@@ -170,6 +170,8 @@ export default function GameScreen() {
   const [selectedOut, setSelectedOut] = useState<string | null>(null);
   const [selectedIn, setSelectedIn] = useState<string | null>(null);
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
+  // Track which recommendation pairs have been applied in the current dialog
+  const [appliedRecs, setAppliedRecs] = useState<Set<string>>(new Set());
 
   const { players, settings, elapsedSeconds, isRunning, subDialogOpen, pendingRecs, completedWindows, activeWindow } = state;
 
@@ -207,6 +209,7 @@ export default function GameScreen() {
 
   function handleApplyRec(outId: string, inId: string) {
     applySubstitution(outId, inId);
+    setAppliedRecs((prev) => new Set(prev).add(`${outId}-${inId}`));
   }
 
   return (
@@ -416,13 +419,28 @@ export default function GameScreen() {
                         </span>
                       </div>
                     </div>
-                    <Button
-                      onClick={() => handleApplyRec(rec.playerOut.id, rec.playerIn.id)}
-                      className="h-9 px-4 rounded-xl bg-[#a3e635] hover:bg-[#84cc16] text-[#0d1117] text-sm font-bold shrink-0"
-                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                    >
-                      Apply
-                    </Button>
+                    {(() => {
+                      const key = `${rec.playerOut.id}-${rec.playerIn.id}`;
+                      const applied = appliedRecs.has(key);
+                      return (
+                        <Button
+                          onClick={() => handleApplyRec(rec.playerOut.id, rec.playerIn.id)}
+                          disabled={applied}
+                          className={`h-9 px-4 rounded-xl text-sm font-bold shrink-0 transition-all ${
+                            applied
+                              ? "bg-white/10 text-white/40 cursor-not-allowed"
+                              : "bg-[#a3e635] hover:bg-[#84cc16] text-[#0d1117]"
+                          }`}
+                          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                        >
+                          {applied ? (
+                            <><CheckCircle2 size={14} className="mr-1" /> Done</>
+                          ) : (
+                            "Apply"
+                          )}
+                        </Button>
+                      );
+                    })()}
                   </div>
                   <p className="text-white/40 text-xs" style={{ fontFamily: "'DM Sans', sans-serif" }}>
                     {rec.reason}
@@ -434,7 +452,7 @@ export default function GameScreen() {
 
           <div className="px-5 pb-5">
             <Button
-              onClick={completeSubWindow}
+              onClick={() => { setAppliedRecs(new Set()); completeSubWindow(); }}
               className="w-full h-12 rounded-xl bg-white/8 hover:bg-white/15 text-white font-semibold"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
