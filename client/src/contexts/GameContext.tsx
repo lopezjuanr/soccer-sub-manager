@@ -1,6 +1,12 @@
 /**
  * Soccer Sub Manager — Game State Context
  * Design: Clean Coach's App — near-black + electric lime, urgency-coded player cards
+ *
+ * Persistence strategy:
+ * - ROSTER_KEY: stores player names only (persists across games)
+ * - GAME_KEY: stores the full live game state snapshot + a wall-clock anchor
+ *   so that on tab refresh the elapsed time can be reconstructed from real time.
+ * - On RESET or END_GAME the game snapshot is cleared.
  */
 
 import React, {
@@ -22,7 +28,12 @@ import {
   effectiveMinutes,
 } from "@/lib/gameEngine";
 
+// ─── Storage keys ────────────────────────────────────────────────────────────
+
 const ROSTER_KEY = "soccer-sub-manager-roster";
+const GAME_KEY = "soccer-sub-manager-game";
+
+// ─── Roster helpers ───────────────────────────────────────────────────────────
 
 function loadSavedRoster(): Player[] {
   try {
@@ -52,6 +63,131 @@ function saveRoster(players: Player[]) {
   }
 }
 
+// ─── Game snapshot helpers ────────────────────────────────────────────────────
+
+/**
+ * What we persist for the live game.
+ * `clockAnchorMs` is the wall-clock time (Date.now()) when the game was last
+ * resumed. On reload we add (now - clockAnchorMs) / 1000 to elapsedSeconds so
+ * the clock is accurate even after the tab was closed.
+ * It is null when the clock is paused (e.g. halftime).
+ */
+interface GameSnapshot {
+  screen: AppScreen;
+  players: Player[];
+  settings: GameSettings;
+  elapsedSeconds: number;
+  isRunning: boolean;
+  completedWindows: SubWindow[];
+  subDialogOpen: boolean;
+  activeWindow: SubWindow | null;
+  /** Wall-clock ms when the clock was last started/resumed. Null when paused. */
+  clockAnchorMs: number | null;
+}
+
+function saveGameSnapshot(state: GameState, clockAnchorMs: number | null) {
+  if (state.screen === "setup") {
+    // Nothing to persist during setup — roster key handles player names
+    localStorage.removeItem(GAME_KEY);
+    return;
+  }
+  try {
+    const snap: GameSnapshot = {
+      screen: state.screen,
+      players: state.players,
+      settings: state.settings,
+      elapsedSeconds: state.elapsedSeconds,
+      isRunning: state.isRunning,
+      completedWindows: state.completedWindows,
+      subDialogOpen: state.subDialogOpen,
+      activeWindow: state.activeWindow,
+      clockAnchorMs,
+    };
+    localStorage.setItem(GAME_KEY, JSON.stringify(snap));
+  } catch {
+    // ignore
+  }
+}
+
+function clearGameSnapshot() {
+  try {
+    localStorage.removeItem(GAME_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Load and reconstruct game state from localStorage.
+ * If the clock was running when the tab closed, we fast-forward elapsed seconds
+ * by the real time that passed since `clockAnchorMs`.
+ */
+function loadGameSnapshot(): Partial<GameState> | null {
+  try {
+    const raw = localStorage.getItem(GAME_KEY);
+    if (!raw) return null;
+    const snap: GameSnapshot = JSON.parse(raw);
+
+    let elapsedSeconds = snap.elapsedSeconds;
+
+    // If the clock was running when the tab closed, add real elapsed time
+    if (snap.isRunning && snap.clockAnchorMs !== null) {
+      const realElapsed = Math.floor((Date.now() - snap.clockAnchorMs) / 1000);
+      elapsedSeconds = snap.elapsedSeconds + realElapsed;
+      // Cap at total game time
+      const totalSec = snap.settings.totalMinutes * 60;
+      elapsedSeconds = Math.min(elapsedSeconds, totalSec);
+    }
+
+    // If the game ended while the tab was closed, go straight to summary
+    const totalSec = snap.settings.totalMinutes * 60;
+    if (elapsedSeconds >= totalSec && snap.screen === "game") {
+      // Finalize on-field players' minutes
+      const elapsedMin = totalSec / 60;
+      const players = snap.players.map((p) => {
+        if (p.status === "on" && p.lastOnAt !== null) {
+          return {
+            ...p,
+            minutesPlayed: p.minutesPlayed + (elapsedMin - p.lastOnAt),
+            status: "off" as const,
+            lastOnAt: null,
+          };
+        }
+        return p;
+      });
+      clearGameSnapshot();
+      return {
+        screen: "summary",
+        players,
+        settings: snap.settings,
+        elapsedSeconds: totalSec,
+        isRunning: false,
+        completedWindows: snap.completedWindows,
+        pendingRecs: [],
+        subDialogOpen: false,
+        activeWindow: null,
+      };
+    }
+
+    // If we're restoring mid-game, close any open sub dialog so the coach
+    // can see the current state cleanly. The auto-trigger effect will re-open
+    // it if we're still at a sub window threshold.
+    return {
+      screen: snap.screen,
+      players: snap.players,
+      settings: snap.settings,
+      elapsedSeconds,
+      isRunning: snap.screen === "game", // resume clock if game was live
+      completedWindows: snap.completedWindows,
+      pendingRecs: [],
+      subDialogOpen: false,
+      activeWindow: null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ─── State ───────────────────────────────────────────────────────────────────
 
 export type AppScreen = "setup" | "game" | "summary";
@@ -73,17 +209,31 @@ export interface GameState {
   activeWindow: SubWindow | null;
 }
 
-const initialState: GameState = {
-  screen: "setup",
-  players: loadSavedRoster(),
-  settings: DEFAULT_SETTINGS,
-  elapsedSeconds: 0,
-  isRunning: false,
-  completedWindows: [],
-  pendingRecs: [],
-  subDialogOpen: false,
-  activeWindow: null,
-};
+function buildInitialState(): GameState {
+  const base: GameState = {
+    screen: "setup",
+    players: loadSavedRoster(),
+    settings: DEFAULT_SETTINGS,
+    elapsedSeconds: 0,
+    isRunning: false,
+    completedWindows: [],
+    pendingRecs: [],
+    subDialogOpen: false,
+    activeWindow: null,
+  };
+
+  const saved = loadGameSnapshot();
+  if (!saved) return base;
+
+  return {
+    ...base,
+    ...saved,
+    // pendingRecs are always recomputed, never restored from storage
+    pendingRecs: [],
+  };
+}
+
+const initialState: GameState = buildInitialState();
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
@@ -192,14 +342,12 @@ function reducer(state: GameState, action: Action): GameState {
         { id: "halftime" as SubWindow, sec: totalSec * 0.5 },
         { id: "mid-second" as SubWindow, sec: totalSec * 0.75 },
       ];
-      // Find the next sub window that hasn't been completed and is still ahead
       const next = windows.find(
         (w) =>
           !state.completedWindows.includes(w.id) &&
           state.elapsedSeconds < w.sec
       );
       if (next) {
-        // Jump clock to that window so the useEffect triggers it
         return { ...state, elapsedSeconds: Math.floor(next.sec) };
       }
       // No more sub windows — skip to end of game
@@ -235,11 +383,18 @@ function reducer(state: GameState, action: Action): GameState {
     }
 
     case "RESET": {
-      // Restore the saved roster (stats cleared) so players persist across games
+      clearGameSnapshot();
       const savedRoster = loadSavedRoster();
       return {
-        ...initialState,
+        screen: "setup",
         players: savedRoster,
+        settings: DEFAULT_SETTINGS,
+        elapsedSeconds: 0,
+        isRunning: false,
+        completedWindows: [],
+        pendingRecs: [],
+        subDialogOpen: false,
+        activeWindow: null,
       };
     }
 
@@ -272,17 +427,52 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedMinutes = state.elapsedSeconds / 60;
 
+  /**
+   * clockAnchorRef tracks the wall-clock time (Date.now()) when the clock was
+   * last started or resumed. We update it whenever isRunning flips to true and
+   * clear it when the clock stops. This is used to persist accurate elapsed
+   * time to localStorage so a tab refresh can recover real game time.
+   */
+  const clockAnchorRef = useRef<number | null>(
+    // If we're restoring a running game, anchor to now (we already fast-forwarded
+    // elapsed seconds in loadGameSnapshot, so now is the correct new anchor).
+    initialState.isRunning ? Date.now() : null
+  );
+
   // ── Timer ──
   useEffect(() => {
     if (state.isRunning && state.screen === "game") {
+      // (Re)start the clock — update anchor
+      clockAnchorRef.current = Date.now();
       timerRef.current = setInterval(() => dispatch({ type: "TICK" }), 1000);
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
+      // Clock stopped — clear anchor
+      if (!state.isRunning) clockAnchorRef.current = null;
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [state.isRunning, state.screen]);
+
+  // ── Persist game state to localStorage on every meaningful change ──
+  useEffect(() => {
+    if (state.screen === "summary") {
+      // Game is over — clear the live snapshot so next load starts fresh
+      clearGameSnapshot();
+      return;
+    }
+    saveGameSnapshot(state, clockAnchorRef.current);
+  }, [
+    state.screen,
+    state.players,
+    state.elapsedSeconds,
+    state.isRunning,
+    state.completedWindows,
+    state.subDialogOpen,
+    state.activeWindow,
+    state.settings,
+  ]);
 
   // ── Auto-trigger sub windows ──
   useEffect(() => {
@@ -305,7 +495,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           state.settings
         );
         dispatch({ type: "OPEN_SUB_DIALOG", window: w.id, recs });
-        // Vibrate to alert the coach even if they're watching the field
         if (typeof navigator !== "undefined" && navigator.vibrate) {
           navigator.vibrate([300, 100, 300]);
         }
