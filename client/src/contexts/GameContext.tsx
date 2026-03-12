@@ -360,7 +360,9 @@ function reducer(state: GameState, action: Action): GameState {
           state.elapsedSeconds < w.sec
       );
       if (next) {
-        return { ...state, elapsedSeconds: Math.floor(next.sec) };
+        // Jump to 60 seconds BEFORE the window so the coach has time to react
+        const targetSec = Math.max(state.elapsedSeconds + 1, Math.floor(next.sec) - 60);
+        return { ...state, elapsedSeconds: targetSec };
       }
       // No more sub windows — skip to end of game
       const elapsed = totalSec / 60;
