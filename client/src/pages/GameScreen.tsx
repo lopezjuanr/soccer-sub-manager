@@ -4,6 +4,7 @@
  */
 
 import { useState } from "react";
+import { useWakeLock } from "@/hooks/useWakeLock";
 import { useGame } from "@/contexts/GameContext";
 import { effectiveMinutes, effectiveHalfMinutes, playerUrgency, UrgencyLevel, SUB_WINDOWS, MIN_TOTAL_MINUTES, halfCounts } from "@/lib/gameEngine";
 import { Button } from "@/components/ui/button";
@@ -204,6 +205,9 @@ export default function GameScreen() {
   const [appliedRecs, setAppliedRecs] = useState<Set<string>>(new Set());
 
   const { players, settings, elapsedSeconds, isRunning, subDialogOpen, pendingRecs, completedWindows, activeWindow } = state;
+
+  // Keep the screen awake for the entire game session
+  useWakeLock(state.screen === "game");
 
   const onField = players.filter((p) => p.status === "on");
   const bench = players.filter((p) => p.status === "off");
