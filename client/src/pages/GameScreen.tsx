@@ -197,8 +197,8 @@ export default function GameScreen() {
   } = useGame();
 
   const [manualSubOpen, setManualSubOpen] = useState(false);
-  const [selectedOut, setSelectedOut] = useState<string | null>(null);
-  const [selectedIn, setSelectedIn] = useState<string | null>(null);
+  const [selectedOut, setSelectedOut] = useState<Set<string>>(new Set());
+  const [selectedIn, setSelectedIn] = useState<Set<string>>(new Set());
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
   // Track which recommendation pairs have been applied in the current dialog
   const [appliedRecs, setAppliedRecs] = useState<Set<string>>(new Set());
@@ -226,15 +226,21 @@ export default function GameScreen() {
   }));
 
   function handleManualSub() {
-    if (!selectedOut || !selectedIn) {
-      toast.error("Select one player out and one player in");
+    if (selectedOut.size === 0 || selectedIn.size === 0) {
+      toast.error("Select at least one player out and one player in");
       return;
     }
-    applySubstitution(selectedOut, selectedIn);
-    setSelectedOut(null);
-    setSelectedIn(null);
+    if (selectedOut.size !== selectedIn.size) {
+      toast.error(`Select the same number of players out and in (${selectedOut.size} out, ${selectedIn.size} in)`);
+      return;
+    }
+    const outIds = Array.from(selectedOut);
+    const inIds = Array.from(selectedIn);
+    outIds.forEach((outId, i) => applySubstitution(outId, inIds[i]));
+    setSelectedOut(new Set());
+    setSelectedIn(new Set());
     setManualSubOpen(false);
-    toast.success("Substitution applied");
+    toast.success(`${outIds.length} substitution${outIds.length > 1 ? "s" : ""} applied`);
   }
 
   function handleApplyRec(outId: string, inId: string) {
@@ -518,7 +524,7 @@ export default function GameScreen() {
               Manual Substitution
             </DialogTitle>
             <p className="text-white/50 text-sm" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-              Select who goes out and who comes in
+              Tap to select — counts must match
             </p>
           </DialogHeader>
 
@@ -531,17 +537,21 @@ export default function GameScreen() {
                 {onField.map((p) => (
                   <button
                     key={p.id}
-                    onClick={() => setSelectedOut(p.id)}
+                    onClick={() => setSelectedOut((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(p.id)) next.delete(p.id); else next.add(p.id);
+                      return next;
+                    })}
                     className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
-                      selectedOut === p.id
+                      selectedOut.has(p.id)
                         ? "bg-red-500/20 border-red-500/50 text-white"
                         : "bg-white/5 border-white/8 text-white/70 hover:bg-white/10"
                     }`}
                     style={{ fontFamily: "'DM Sans', sans-serif" }}
                   >
-                    {p.name}
-                    <span className="text-xs text-white/40 ml-2">
-                      {effectiveMinutes(p, elapsedMinutes).toFixed(1)} min
+                    <span className="flex items-center justify-between">
+                      <span>{p.name}<span className="text-xs text-white/40 ml-2">{effectiveMinutes(p, elapsedMinutes).toFixed(1)} min</span></span>
+                      {selectedOut.has(p.id) && <span className="text-[10px] font-bold text-red-400 bg-red-500/20 px-2 py-0.5 rounded-full">OUT</span>}
                     </span>
                   </button>
                 ))}
@@ -556,17 +566,21 @@ export default function GameScreen() {
                 {bench.map((p) => (
                   <button
                     key={p.id}
-                    onClick={() => setSelectedIn(p.id)}
+                    onClick={() => setSelectedIn((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(p.id)) next.delete(p.id); else next.add(p.id);
+                      return next;
+                    })}
                     className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
-                      selectedIn === p.id
+                      selectedIn.has(p.id)
                         ? "bg-[#a3e635]/20 border-[#a3e635]/50 text-white"
                         : "bg-white/5 border-white/8 text-white/70 hover:bg-white/10"
                     }`}
                     style={{ fontFamily: "'DM Sans', sans-serif" }}
                   >
-                    {p.name}
-                    <span className="text-xs text-white/40 ml-2">
-                      {effectiveMinutes(p, elapsedMinutes).toFixed(1)} min
+                    <span className="flex items-center justify-between">
+                      <span>{p.name}<span className="text-xs text-white/40 ml-2">{effectiveMinutes(p, elapsedMinutes).toFixed(1)} min</span></span>
+                      {selectedIn.has(p.id) && <span className="text-[10px] font-bold text-[#a3e635] bg-[#a3e635]/20 px-2 py-0.5 rounded-full">IN</span>}
                     </span>
                   </button>
                 ))}
@@ -579,9 +593,28 @@ export default function GameScreen() {
             </div>
           </div>
 
+          {/* Count indicator */}
+          {(selectedOut.size > 0 || selectedIn.size > 0) && (
+            <div className="px-5 pb-2 flex items-center justify-center gap-2">
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                selectedOut.size > 0 ? "bg-red-500/20 text-red-400" : "bg-white/8 text-white/30"
+              }`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                {selectedOut.size} OUT
+              </span>
+              <span className="text-white/30 text-xs">=</span>
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                selectedIn.size > 0 ? "bg-[#a3e635]/20 text-[#a3e635]" : "bg-white/8 text-white/30"
+              }`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                {selectedIn.size} IN
+              </span>
+              {selectedOut.size !== selectedIn.size && selectedOut.size > 0 && selectedIn.size > 0 && (
+                <span className="text-amber-400 text-xs" style={{ fontFamily: "'DM Sans', sans-serif" }}>— counts must match</span>
+              )}
+            </div>
+          )}
           <div className="px-5 pb-5 flex gap-2">
             <Button
-              onClick={() => { setManualSubOpen(false); setSelectedOut(null); setSelectedIn(null); }}
+              onClick={() => { setManualSubOpen(false); setSelectedOut(new Set()); setSelectedIn(new Set()); }}
               className="flex-1 h-11 rounded-xl bg-white/8 hover:bg-white/15 text-white"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
@@ -589,7 +622,7 @@ export default function GameScreen() {
             </Button>
             <Button
               onClick={handleManualSub}
-              disabled={!selectedOut || !selectedIn}
+              disabled={selectedOut.size === 0 || selectedIn.size === 0 || selectedOut.size !== selectedIn.size}
               className="flex-1 h-11 rounded-xl bg-[#a3e635] hover:bg-[#84cc16] text-[#0d1117] font-bold disabled:opacity-40"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
