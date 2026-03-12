@@ -209,6 +209,8 @@ export interface GameState {
   subDialogOpen: boolean;
   /** Current active sub window (if any) */
   activeWindow: SubWindow | null;
+  /** Number of manual subs made since the last completed sub window */
+  subsSinceLastWindow: number;
 }
 
 function buildInitialState(): GameState {
@@ -222,6 +224,7 @@ function buildInitialState(): GameState {
     pendingRecs: [],
     subDialogOpen: false,
     activeWindow: null,
+    subsSinceLastWindow: 0,
   };
 
   const saved = loadGameSnapshot();
@@ -284,6 +287,7 @@ function reducer(state: GameState, action: Action): GameState {
         pendingRecs: [],
         subDialogOpen: false,
         activeWindow: null,
+        subsSinceLastWindow: 0,
       };
     }
 
@@ -333,7 +337,7 @@ function reducer(state: GameState, action: Action): GameState {
         }
         return p;
       });
-      return { ...state, players };
+      return { ...state, players, subsSinceLastWindow: state.subsSinceLastWindow + 1 };
     }
 
     case "COMPLETE_SUB_WINDOW": {
@@ -344,6 +348,7 @@ function reducer(state: GameState, action: Action): GameState {
         activeWindow: null,
         // Always ensure clock is running when dismissing a sub window
         isRunning: true,
+        subsSinceLastWindow: 0,
       };
     }
 
@@ -421,6 +426,7 @@ function reducer(state: GameState, action: Action): GameState {
         pendingRecs: [],
         subDialogOpen: false,
         activeWindow: null,
+        subsSinceLastWindow: 0,
       };
     }
 
@@ -510,21 +516,30 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       { id: "mid-second", sec: totalSec * 0.75 },
     ];
     for (const w of windows) {
+      // For mid-half windows (not halftime), skip the dialog if the coach
+      // already made at least one manual sub since the last completed window.
+      const isMidHalf = w.id === "mid-first" || w.id === "mid-second";
+      const alreadySubbed = state.subsSinceLastWindow > 0;
       if (
         state.elapsedSeconds >= w.sec &&
         !state.completedWindows.includes(w.id) &&
         state.activeWindow !== w.id
       ) {
-        const recs = computeRecommendations(
-          state.players,
-          elapsedMinutes,
-          state.settings,
-          state.completedWindows,
-          w.id
-        );
-        dispatch({ type: "OPEN_SUB_DIALOG", window: w.id, recs });
-        if (typeof navigator !== "undefined" && navigator.vibrate) {
-          navigator.vibrate([300, 100, 300]);
+        if (isMidHalf && alreadySubbed) {
+          // Coach already made a manual sub — silently mark this window done
+          dispatch({ type: "COMPLETE_SUB_WINDOW", window: w.id });
+        } else {
+          const recs = computeRecommendations(
+            state.players,
+            elapsedMinutes,
+            state.settings,
+            state.completedWindows,
+            w.id
+          );
+          dispatch({ type: "OPEN_SUB_DIALOG", window: w.id, recs });
+          if (typeof navigator !== "undefined" && navigator.vibrate) {
+            navigator.vibrate([300, 100, 300]);
+          }
         }
         break;
       }
@@ -540,6 +555,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     state.activeWindow,
     state.players,
     state.settings,
+    state.subsSinceLastWindow,
     elapsedMinutes,
   ]);
 
