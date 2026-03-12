@@ -46,6 +46,8 @@ function loadSavedRoster(): Player[] {
       minutesPlayed: 0,
       status: "off" as const,
       lastOnAt: null,
+      firstHalfMinutes: 0,
+      secondHalfMinutes: 0,
     }));
   } catch {
     return [];
@@ -269,6 +271,8 @@ function reducer(state: GameState, action: Action): GameState {
         status: (i < state.settings.fieldSize ? "on" : "off") as "on" | "off",
         lastOnAt: i < state.settings.fieldSize ? 0 : null,
         minutesPlayed: 0,
+        firstHalfMinutes: 0,
+        secondHalfMinutes: 0,
       }));
       return {
         ...state,
@@ -307,12 +311,20 @@ function reducer(state: GameState, action: Action): GameState {
 
     case "APPLY_SUB": {
       const elapsed = state.elapsedSeconds / 60;
+      const halfPoint = state.settings.totalMinutes / 2;
       const players = state.players.map((p) => {
         if (p.id === action.playerOutId) {
+          // Commit the stint's minutes split across halves
+          const stintStart = p.lastOnAt ?? elapsed;
+          const stintEnd = elapsed;
+          const firstAdd = Math.max(0, Math.min(stintEnd, halfPoint) - Math.min(stintStart, halfPoint));
+          const secondAdd = Math.max(0, Math.max(stintEnd, halfPoint) - Math.max(stintStart, halfPoint));
           return {
             ...p,
             status: "off" as const,
             minutesPlayed: effectiveMinutes(p, elapsed),
+            firstHalfMinutes: p.firstHalfMinutes + firstAdd,
+            secondHalfMinutes: p.secondHalfMinutes + secondAdd,
             lastOnAt: null,
           };
         }
@@ -352,11 +364,17 @@ function reducer(state: GameState, action: Action): GameState {
       }
       // No more sub windows — skip to end of game
       const elapsed = totalSec / 60;
+      const halfPoint = state.settings.totalMinutes / 2;
       const players = state.players.map((p) => {
         if (p.status === "on" && p.lastOnAt !== null) {
+          const stintStart = p.lastOnAt;
+          const firstAdd = Math.max(0, Math.min(elapsed, halfPoint) - Math.min(stintStart, halfPoint));
+          const secondAdd = Math.max(0, Math.max(elapsed, halfPoint) - Math.max(stintStart, halfPoint));
           return {
             ...p,
             minutesPlayed: effectiveMinutes(p, elapsed),
+            firstHalfMinutes: p.firstHalfMinutes + firstAdd,
+            secondHalfMinutes: p.secondHalfMinutes + secondAdd,
             status: "off" as const,
             lastOnAt: null,
           };
@@ -368,22 +386,28 @@ function reducer(state: GameState, action: Action): GameState {
 
     case "END_GAME": {
       const elapsed = state.elapsedSeconds / 60;
+      const halfPoint = state.settings.totalMinutes / 2;
       const players = state.players.map((p) => {
         if (p.status === "on" && p.lastOnAt !== null) {
+          const stintStart = p.lastOnAt;
+          const firstAdd = Math.max(0, Math.min(elapsed, halfPoint) - Math.min(stintStart, halfPoint));
+          const secondAdd = Math.max(0, Math.max(elapsed, halfPoint) - Math.max(stintStart, halfPoint));
           return {
             ...p,
             minutesPlayed: effectiveMinutes(p, elapsed),
+            firstHalfMinutes: p.firstHalfMinutes + firstAdd,
+            secondHalfMinutes: p.secondHalfMinutes + secondAdd,
             status: "off" as const,
             lastOnAt: null,
           };
         }
         return p;
       });
+      clearGameSnapshot();
       return { ...state, screen: "summary", isRunning: false, players };
     }
 
     case "RESET": {
-      clearGameSnapshot();
       const savedRoster = loadSavedRoster();
       return {
         screen: "setup",
@@ -492,7 +516,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const recs = computeRecommendations(
           state.players,
           elapsedMinutes,
-          state.settings
+          state.settings,
+          state.completedWindows,
+          w.id
         );
         dispatch({ type: "OPEN_SUB_DIALOG", window: w.id, recs });
         if (typeof navigator !== "undefined" && navigator.vibrate) {
@@ -523,6 +549,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         minutesPlayed: 0,
         status: "off",
         lastOnAt: null,
+        firstHalfMinutes: 0,
+        secondHalfMinutes: 0,
       };
       dispatch({ type: "SET_ROSTER", players: [...state.players, player] });
     },

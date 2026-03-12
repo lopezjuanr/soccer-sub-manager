@@ -21,7 +21,11 @@ export default function SummaryScreen() {
   const required = settings.totalMinutes / 2;
 
   const sorted = [...players].sort((a, b) => b.minutesPlayed - a.minutesPlayed);
-  const allMet = sorted.every((p) => p.minutesPlayed >= required);
+  const allMetMinimum = sorted.every((p) => p.minutesPlayed >= required);
+  const allPlayedBothHalves = sorted.every(
+    (p) => p.firstHalfMinutes > 0 && p.secondHalfMinutes > 0
+  );
+  const allGood = allMetMinimum && allPlayedBothHalves;
   const totalPlayed = sorted.reduce((sum, p) => sum + p.minutesPlayed, 0);
 
   return (
@@ -33,10 +37,10 @@ export default function SummaryScreen() {
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 200, damping: 15 }}
           className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${
-            allMet ? "bg-[#a3e635]/15" : "bg-amber-500/15"
+            allGood ? "bg-[#a3e635]/15" : "bg-amber-500/15"
           }`}
         >
-          <Trophy size={32} className={allMet ? "text-[#a3e635]" : "text-amber-400"} />
+          <Trophy size={32} className={allGood ? "text-[#a3e635]" : "text-amber-400"} />
         </motion.div>
 
         <h1
@@ -49,27 +53,47 @@ export default function SummaryScreen() {
           className="text-white/50 text-sm mt-1"
           style={{ fontFamily: "'DM Sans', sans-serif" }}
         >
-          {settings.totalMinutes}-min game · {players.length} players · minimum {required} min each
+          {settings.totalMinutes}-min game · {players.length} players · min {required} min each
         </p>
 
-        {/* Fair play status badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className={`inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-full text-sm font-semibold ${
-            allMet
-              ? "bg-[#a3e635]/15 text-[#a3e635] border border-[#a3e635]/25"
-              : "bg-amber-500/15 text-amber-400 border border-amber-500/25"
-          }`}
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          {allMet ? (
-            <><CheckCircle2 size={15} /> All players met fair play requirement</>
-          ) : (
-            <><XCircle size={15} /> Some players didn't reach minimum time</>
-          )}
-        </motion.div>
+        {/* Fair play status badges */}
+        <div className="flex flex-col items-center gap-2 mt-3">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${
+              allMetMinimum
+                ? "bg-[#a3e635]/15 text-[#a3e635] border border-[#a3e635]/25"
+                : "bg-red-500/15 text-red-400 border border-red-500/25"
+            }`}
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            {allMetMinimum ? (
+              <><CheckCircle2 size={15} /> All players met {required}-min minimum</>
+            ) : (
+              <><XCircle size={15} /> Some players missed the {required}-min minimum</>
+            )}
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${
+              allPlayedBothHalves
+                ? "bg-[#a3e635]/15 text-[#a3e635] border border-[#a3e635]/25"
+                : "bg-red-500/15 text-red-400 border border-red-500/25"
+            }`}
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            {allPlayedBothHalves ? (
+              <><CheckCircle2 size={15} /> All players played in both halves</>
+            ) : (
+              <><XCircle size={15} /> Some players missed a half</>
+            )}
+          </motion.div>
+        </div>
       </div>
 
       {/* Playing time table */}
@@ -84,18 +108,34 @@ export default function SummaryScreen() {
               Player
             </span>
             <span
-              className="w-24 text-right text-white/40 text-xs font-bold uppercase tracking-widest"
+              className="w-10 text-center text-white/40 text-xs font-bold uppercase tracking-widest"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              Time Played
+              1st
             </span>
-            <span className="w-8" />
+            <span
+              className="w-10 text-center text-white/40 text-xs font-bold uppercase tracking-widest"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              2nd
+            </span>
+            <span
+              className="w-14 text-right text-white/40 text-xs font-bold uppercase tracking-widest"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              Total
+            </span>
+            <span className="w-6" />
           </div>
 
           {/* Player rows */}
           {sorted.map((player, i) => {
-            const met = player.minutesPlayed >= required;
+            const metMinimum = player.minutesPlayed >= required;
+            const playedFirst = player.firstHalfMinutes > 0;
+            const playedSecond = player.secondHalfMinutes > 0;
+            const allOk = metMinimum && playedFirst && playedSecond;
             const pct = Math.min(100, (player.minutesPlayed / required) * 100);
+
             return (
               <motion.div
                 key={player.id}
@@ -103,13 +143,13 @@ export default function SummaryScreen() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.07 + 0.15 }}
                 className={`border-b border-white/6 last:border-0 ${
-                  met ? "" : "bg-red-500/5"
+                  allOk ? "" : "bg-red-500/5"
                 }`}
               >
-                <div className="flex items-center px-4 py-3 gap-3">
+                <div className="flex items-center px-4 py-3 gap-2">
                   {/* Rank number */}
                   <span
-                    className="w-5 text-white/25 text-xs font-bold tabular-nums shrink-0"
+                    className="w-4 text-white/25 text-xs font-bold tabular-nums shrink-0"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {i + 1}
@@ -125,7 +165,7 @@ export default function SummaryScreen() {
                     </span>
                     <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                       <motion.div
-                        className={`h-full rounded-full ${met ? "bg-[#a3e635]" : "bg-red-500"}`}
+                        className={`h-full rounded-full ${metMinimum ? "bg-[#a3e635]" : "bg-red-500"}`}
                         initial={{ width: 0 }}
                         animate={{ width: `${pct}%` }}
                         transition={{ duration: 0.7, delay: i * 0.07 + 0.3, ease: "easeOut" }}
@@ -133,11 +173,35 @@ export default function SummaryScreen() {
                     </div>
                   </div>
 
-                  {/* Time value */}
-                  <div className="w-24 text-right shrink-0">
+                  {/* 1st half */}
+                  <div className="w-10 text-center shrink-0">
                     <span
-                      className={`text-base font-bold tabular-nums ${
-                        met ? "text-[#a3e635]" : "text-red-400"
+                      className={`text-xs font-semibold tabular-nums ${
+                        playedFirst ? "text-[#a3e635]" : "text-red-400"
+                      }`}
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      {playedFirst ? `${Math.round(player.firstHalfMinutes)}m` : "✗"}
+                    </span>
+                  </div>
+
+                  {/* 2nd half */}
+                  <div className="w-10 text-center shrink-0">
+                    <span
+                      className={`text-xs font-semibold tabular-nums ${
+                        playedSecond ? "text-[#a3e635]" : "text-red-400"
+                      }`}
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      {playedSecond ? `${Math.round(player.secondHalfMinutes)}m` : "✗"}
+                    </span>
+                  </div>
+
+                  {/* Total time */}
+                  <div className="w-14 text-right shrink-0">
+                    <span
+                      className={`text-sm font-bold tabular-nums ${
+                        metMinimum ? "text-[#a3e635]" : "text-red-400"
                       }`}
                       style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                     >
@@ -147,7 +211,7 @@ export default function SummaryScreen() {
 
                   {/* Status icon */}
                   <div className="w-5 shrink-0">
-                    {met ? (
+                    {allOk ? (
                       <CheckCircle2 size={16} className="text-[#a3e635]" />
                     ) : (
                       <XCircle size={16} className="text-red-400" />
@@ -155,15 +219,33 @@ export default function SummaryScreen() {
                   </div>
                 </div>
 
-                {/* Shortfall note */}
-                {!met && (
-                  <div className="px-4 pb-2.5 -mt-1">
-                    <span
-                      className="text-red-400/60 text-xs"
-                      style={{ fontFamily: "'DM Sans', sans-serif" }}
-                    >
-                      {formatMinSec(required - player.minutesPlayed)} short of the {required}-min minimum
-                    </span>
+                {/* Issue notes */}
+                {(!metMinimum || !playedFirst || !playedSecond) && (
+                  <div className="px-4 pb-2.5 -mt-1 flex flex-col gap-0.5">
+                    {!playedFirst && (
+                      <span
+                        className="text-red-400/70 text-xs"
+                        style={{ fontFamily: "'DM Sans', sans-serif" }}
+                      >
+                        Did not play in the 1st half
+                      </span>
+                    )}
+                    {!playedSecond && (
+                      <span
+                        className="text-red-400/70 text-xs"
+                        style={{ fontFamily: "'DM Sans', sans-serif" }}
+                      >
+                        Did not play in the 2nd half
+                      </span>
+                    )}
+                    {!metMinimum && (
+                      <span
+                        className="text-red-400/60 text-xs"
+                        style={{ fontFamily: "'DM Sans', sans-serif" }}
+                      >
+                        {formatMinSec(required - player.minutesPlayed)} short of {required}-min minimum
+                      </span>
+                    )}
                   </div>
                 )}
               </motion.div>
