@@ -5,15 +5,16 @@
  * Game rules:
  * - 5–7 players on roster
  * - 4 players on field at a time
- * - Each player must play at least half the total game time (≥20 min in a 40-min game)
- * - NEW: Every player must play in BOTH the first half AND the second half
+ * - Each player must play at least 16 min total in a 40-min game
+ * - Every player must play at least 7 min in EACH half (1st and 2nd)
+ *   — a half with fewer than 7 min does NOT count as "played in that half"
  * - 3 substitution windows: mid-first-half (10 min), halftime (20 min), mid-second-half (30 min)
  *
  * Half definitions (40-min game):
  *   First half:  0:00 – 20:00
  *   Second half: 20:00 – 40:00
  *   Mid-1st:     10:00  ← last chance to get bench players 1st-half time
- *   Halftime:    20:00  ← hard deadline: any player with 0 first-half min MUST come on
+ *   Halftime:    20:00  ← hard deadline: any player with <7 first-half min MUST come on
  *   Mid-2nd:     30:00  ← balance remaining time
  */
 
@@ -53,6 +54,12 @@ export const DEFAULT_SETTINGS: GameSettings = {
   totalMinutes: 40,
   fieldSize: 4,
 };
+
+/** Minimum total minutes a player must play in the game */
+export const MIN_TOTAL_MINUTES = 16;
+
+/** Minimum minutes in a single half for it to count as "played in that half" */
+export const MIN_HALF_MINUTES = 7;
 
 /**
  * The 3 substitution windows as fractions of total game time.
@@ -122,18 +129,24 @@ export function minutesRemaining(
 }
 
 /**
+ * Whether a player's minutes in a half count as "played in that half".
+ * Requires at least MIN_HALF_MINUTES (7 min).
+ */
+export function halfCounts(minutes: number): boolean {
+  return minutes >= MIN_HALF_MINUTES;
+}
+
+/**
  * Urgency level for a player.
  *
  * Priority order:
- * 1. "critical" — player has NOT played in a half that is now over (missed a half entirely).
- *    This is a rule violation — shown as a flashing red border.
- * 2. "urgent" — player has NOT played in the current half and there is ≤1 sub window left
- *    in this half to fix it. Must act NOW.
- * 3. "caution" — player has NOT played in the current half but there is still a sub window
- *    coming in this half where they can be brought on.
- * 4. "low-time" — player has played in both halves but is still short of the 20-min minimum
- *    and time is running out.
- * 5. "ok" — player has played in both halves and met (or is on track for) the minimum.
+ * 1. "critical" — player has NOT met the MIN_HALF_MINUTES threshold in a half that is now over.
+ * 2. "urgent" — player has NOT yet met MIN_HALF_MINUTES in the current half and there is ≤1
+ *    sub window left in this half to fix it. Must act NOW.
+ * 3. "caution" — player has NOT yet met MIN_HALF_MINUTES in the current half but there is still
+ *    a sub window coming.
+ * 4. "low-time" — player has met both halves but is still short of the 16-min total minimum.
+ * 5. "ok" — player has met both halves and is on track for the total minimum.
  */
 export type UrgencyLevel = "critical" | "urgent" | "caution" | "low-time" | "ok";
 
@@ -147,31 +160,28 @@ export function playerUrgency(
   const { first, second, total } = effectiveHalfMinutes(player, elapsed, settings);
   const half = currentHalf(elapsed, settings);
 
-  // ── Critical: missed an entire half ──────────────────────────────────────
+  // ── Critical: missed a half (didn't reach MIN_HALF_MINUTES threshold) ────
   // First half is "over" once we're past halftime
-  if (elapsed >= halfPoint && first === 0) return "critical";
-  // Second half is "over" once the game ends (handled at END_GAME), but flag
-  // late in the game if they haven't played yet
-  if (elapsed >= halfPoint && second === 0 && elapsed >= settings.totalMinutes * 0.9) {
+  if (elapsed >= halfPoint && !halfCounts(first)) return "critical";
+  // Late in second half with insufficient second-half time
+  if (elapsed >= halfPoint && !halfCounts(second) && elapsed >= settings.totalMinutes * 0.9) {
     return "critical";
   }
 
-  // ── Urgent: hasn't played in current half, running out of windows ────────
-  const hasPlayedThisHalf = half === 1 ? first > 0 : second > 0;
+  // ── Urgent: hasn't met MIN_HALF_MINUTES in current half, running out ──────
+  const metThisHalf = half === 1 ? halfCounts(first) : halfCounts(second);
 
-  if (!hasPlayedThisHalf) {
-    // How many sub windows are left in the current half?
+  if (!metThisHalf) {
     const windowsLeftInHalf = half === 1
-      ? (completedWindows.includes("mid-first") ? 0 : 1) // halftime is the boundary, not a 1st-half window
+      ? (completedWindows.includes("mid-first") ? 0 : 1)
       : (completedWindows.includes("mid-second") ? 0 : 1);
 
     if (windowsLeftInHalf === 0) return "urgent";
     return "caution";
   }
 
-  // ── Low-time: played in both halves but short of 20-min minimum ──────────
-  const required = settings.totalMinutes / 2;
-  const shortfall = required - total;
+  // ── Low-time: met both halves but short of 16-min total minimum ───────────
+  const shortfall = MIN_TOTAL_MINUTES - total;
   const remaining = minutesRemaining(elapsed, settings);
 
   if (shortfall > 0 && shortfall >= remaining * 0.5) return "low-time";
@@ -182,17 +192,17 @@ export function playerUrgency(
 /**
  * Core substitution recommendation engine — "both halves" edition.
  *
+ * A player "counts" as having played in a half only if they have ≥ MIN_HALF_MINUTES (7 min).
+ *
  * Priority tiers for bench players coming IN:
- *   Tier 1 (MUST): Player has 0 minutes in the current half AND this is the last
- *                  window where they can get first-half time (mid-first) or
- *                  this is halftime (hard deadline for anyone with 0 first-half min).
- *   Tier 2 (SHOULD): Player has 0 minutes in the current half.
- *   Tier 3 (NICE): Player needs more total minutes to hit the 20-min minimum.
+ *   Tier 1 (MUST): Player has < MIN_HALF_MINUTES in the current half AND this is the last
+ *                  window where they can get enough time in this half.
+ *   Tier 2 (SHOULD): Player has < MIN_HALF_MINUTES in the current half.
+ *   Tier 3 (NICE): Player needs more total minutes to hit the 16-min minimum.
  *
  * Priority tiers for field players going OUT:
- *   Prefer pulling players who have already played in BOTH halves and have the most
+ *   Prefer pulling players who have met MIN_HALF_MINUTES in both halves and have the most
  *   total time, so they can afford to sit.
- *   Never pull a player who would then have 0 minutes in a half with no windows left.
  */
 export function computeRecommendations(
   players: Player[],
@@ -203,7 +213,6 @@ export function computeRecommendations(
 ): SubRecommendation[] {
   const halfPoint = settings.totalMinutes / 2;
   const half = currentHalf(elapsed, settings);
-  const required = settings.totalMinutes / 2; // 20 min
 
   // Snapshot effective minutes for all players at this moment
   const withCurrent = players.map((p) => {
@@ -216,37 +225,34 @@ export function computeRecommendations(
 
   // ── Classify bench players by urgency tier ────────────────────────────────
 
-  // Tier 1: MUST come on — has 0 minutes in a half that is about to close
-  // At mid-first (10 min): bench players with 0 first-half minutes. After this
-  //   window, halftime is the last chance. Flag as Tier 1 so they're prioritized.
-  // At halftime (20 min): bench players with 0 first-half minutes. Hard deadline.
-  // At mid-second (30 min): bench players with 0 second-half minutes.
+  // Tier 1: MUST come on — has < MIN_HALF_MINUTES in a half that is about to close
   const tier1Bench = bench.filter((p) => {
     if (activeWindow === "mid-first") {
-      // Last window in 1st half — anyone with 0 first-half minutes is urgent
-      return p.effFirst === 0;
+      // After mid-first, only halftime remains for 1st-half time (10 min left)
+      // If they need 7 min and only 10 min remain in the half, they must come on now
+      return !halfCounts(p.effFirst);
     }
     if (activeWindow === "halftime") {
-      // Hard deadline — anyone who hasn't played in the first half MUST come on
-      return p.effFirst === 0;
+      // Hard deadline — anyone who hasn't met 1st-half minimum MUST come on
+      return !halfCounts(p.effFirst);
     }
     if (activeWindow === "mid-second") {
-      // Last window in 2nd half — anyone with 0 second-half minutes is urgent
-      return p.effSecond === 0;
+      // Last window in 2nd half — anyone with < MIN_HALF_MINUTES in 2nd half is urgent
+      return !halfCounts(p.effSecond);
     }
     return false;
-  }).sort((a, b) => a.effTotal - b.effTotal); // least total time first
-
-  // Tier 2: SHOULD come on — hasn't played in current half but not yet at deadline
-  const tier2Bench = bench.filter((p) => {
-    const playedThisHalf = half === 1 ? p.effFirst > 0 : p.effSecond > 0;
-    return !playedThisHalf && !tier1Bench.find((t) => t.id === p.id);
   }).sort((a, b) => a.effTotal - b.effTotal);
 
-  // Tier 3: NICE — needs more total time but has played in both halves
+  // Tier 2: SHOULD come on — hasn't met MIN_HALF_MINUTES in current half but not at deadline
+  const tier2Bench = bench.filter((p) => {
+    const metThisHalf = half === 1 ? halfCounts(p.effFirst) : halfCounts(p.effSecond);
+    return !metThisHalf && !tier1Bench.find((t) => t.id === p.id);
+  }).sort((a, b) => a.effTotal - b.effTotal);
+
+  // Tier 3: NICE — needs more total time but has met both halves
   const tier3Bench = bench.filter((p) => {
-    const playedBothHalves = p.effFirst > 0 && (half === 1 || p.effSecond > 0);
-    return playedBothHalves && p.effTotal < required;
+    const metBothHalves = halfCounts(p.effFirst) && (half === 1 || halfCounts(p.effSecond));
+    return metBothHalves && p.effTotal < MIN_TOTAL_MINUTES;
   }).sort((a, b) => a.effTotal - b.effTotal);
 
   // Ordered list of bench candidates
@@ -254,19 +260,15 @@ export function computeRecommendations(
 
   // ── Classify field players by who is safe to pull ─────────────────────────
   // "Safe to pull" = pulling them won't cause them to miss a half.
-  // A field player is safe to pull if:
-  //   - They have already played in the current half (some time > 0 in this half)
-  //   - AND they have already played in the previous half (or we're in the 1st half)
-  // Sort by most total time first (pull the most-rested players).
-
+  // A field player is safe to pull if they have met MIN_HALF_MINUTES in the current half
+  // AND in the previous half (or we're in the 1st half).
   const safeField = field.filter((p) => {
-    const playedThisHalf = half === 1 ? p.effFirst > 0 : p.effSecond > 0;
-    const playedPrevHalf = half === 1 ? true : p.effFirst > 0;
-    return playedThisHalf && playedPrevHalf;
+    const metThisHalf = half === 1 ? halfCounts(p.effFirst) : halfCounts(p.effSecond);
+    const metPrevHalf = half === 1 ? true : halfCounts(p.effFirst);
+    return metThisHalf && metPrevHalf;
   }).sort((a, b) => b.effTotal - a.effTotal); // most time first
 
   // Fallback: if no "safe" field players, pull the one with the most time
-  // (best effort — at least we get the urgent bench player on)
   const fallbackField = [...field].sort((a, b) => b.effTotal - a.effTotal);
 
   // ── Build recommendations ─────────────────────────────────────────────────
@@ -277,7 +279,6 @@ export function computeRecommendations(
   for (const benchPlayer of orderedBench) {
     if (usedInIds.has(benchPlayer.id)) continue;
 
-    // Find the best field player to pull
     const fieldPlayer =
       safeField.find((f) => !usedOutIds.has(f.id)) ||
       fallbackField.find((f) => !usedOutIds.has(f.id));
@@ -287,18 +288,18 @@ export function computeRecommendations(
     // Build a human-readable reason
     let reason = "";
     if (tier1Bench.find((t) => t.id === benchPlayer.id)) {
-      if (activeWindow === "halftime" && benchPlayer.effFirst === 0) {
-        reason = `${benchPlayer.name} hasn't played in the 1st half — must come on`;
-      } else if (activeWindow === "mid-second" && benchPlayer.effSecond === 0) {
-        reason = `${benchPlayer.name} hasn't played in the 2nd half yet`;
+      if (activeWindow === "halftime" && !halfCounts(benchPlayer.effFirst)) {
+        reason = `${benchPlayer.name} needs 1st-half time — last chance`;
+      } else if (activeWindow === "mid-second" && !halfCounts(benchPlayer.effSecond)) {
+        reason = `${benchPlayer.name} needs 2nd-half time — last chance`;
       } else {
         reason = `${benchPlayer.name} needs 1st-half time before halftime`;
       }
     } else if (tier2Bench.find((t) => t.id === benchPlayer.id)) {
       const halfLabel = half === 1 ? "1st half" : "2nd half";
-      reason = `${benchPlayer.name} hasn't played in the ${halfLabel} yet`;
+      reason = `${benchPlayer.name} needs more ${halfLabel} time`;
     } else {
-      const needed = Math.ceil(required - benchPlayer.effTotal);
+      const needed = Math.ceil(MIN_TOTAL_MINUTES - benchPlayer.effTotal);
       reason = `${benchPlayer.name} needs ~${needed} more min`;
     }
 

@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import { useGame } from "@/contexts/GameContext";
-import { effectiveMinutes, effectiveHalfMinutes, playerUrgency, UrgencyLevel, SUB_WINDOWS } from "@/lib/gameEngine";
+import { effectiveMinutes, effectiveHalfMinutes, playerUrgency, UrgencyLevel, SUB_WINDOWS, MIN_TOTAL_MINUTES, halfCounts } from "@/lib/gameEngine";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -66,8 +66,7 @@ function PlayerCard({
   const elapsedMin = elapsedSeconds / 60;
   const settings = { totalMinutes, fieldSize: 4 };
   const { first: firstMin, second: secondMin, total: current } = effectiveHalfMinutes(player, elapsedMin, settings);
-  const required = totalMinutes / 2;
-  const pct = Math.min(100, (current / required) * 100);
+  const pct = Math.min(100, (current / MIN_TOTAL_MINUTES) * 100);
   // completedWindows not available here — pass empty array; urgency is approximate in card view
   const urgency = playerUrgency(player, elapsedMin, settings, []);
 
@@ -140,32 +139,32 @@ function PlayerCard({
           className="text-xs text-white/40"
           style={{ fontFamily: "'DM Sans', sans-serif" }}
         >
-          need {required}
+          need {MIN_TOTAL_MINUTES}
         </span>
       </div>
 
       {/* Per-half mini indicators */}
       <div className="flex gap-2 mb-2">
         <div className={`flex-1 flex items-center gap-1.5 rounded-lg px-2 py-1 ${
-          firstMin > 0 ? "bg-[#a3e635]/10" : half === 1 ? "bg-red-500/10" : "bg-white/5"
+          halfCounts(firstMin) ? "bg-[#a3e635]/10" : half === 1 ? "bg-red-500/10" : "bg-white/5"
         }`}>
           <span className={`text-[9px] font-bold uppercase tracking-wider ${
-            firstMin > 0 ? "text-[#a3e635]/70" : half === 1 ? "text-red-400/80" : "text-white/25"
+            halfCounts(firstMin) ? "text-[#a3e635]/70" : half === 1 ? "text-red-400/80" : "text-white/25"
           }`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>1st</span>
           <span className={`text-xs font-semibold tabular-nums ${
-            firstMin > 0 ? "text-[#a3e635]" : half === 1 ? "text-red-400" : "text-white/25"
+            halfCounts(firstMin) ? "text-[#a3e635]" : firstMin > 0 ? "text-amber-400" : half === 1 ? "text-red-400" : "text-white/25"
           }`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {firstMin > 0 ? `${firstMin.toFixed(0)}m` : "—"}
           </span>
         </div>
         <div className={`flex-1 flex items-center gap-1.5 rounded-lg px-2 py-1 ${
-          secondMin > 0 ? "bg-[#a3e635]/10" : half === 2 ? "bg-red-500/10" : "bg-white/5"
+          halfCounts(secondMin) ? "bg-[#a3e635]/10" : half === 2 ? "bg-red-500/10" : "bg-white/5"
         }`}>
           <span className={`text-[9px] font-bold uppercase tracking-wider ${
-            secondMin > 0 ? "text-[#a3e635]/70" : half === 2 ? "text-red-400/80" : "text-white/25"
+            halfCounts(secondMin) ? "text-[#a3e635]/70" : half === 2 ? "text-red-400/80" : "text-white/25"
           }`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>2nd</span>
           <span className={`text-xs font-semibold tabular-nums ${
-            secondMin > 0 ? "text-[#a3e635]" : half === 2 ? "text-red-400" : "text-white/25"
+            halfCounts(secondMin) ? "text-[#a3e635]" : secondMin > 0 ? "text-amber-400" : half === 2 ? "text-red-400" : "text-white/25"
           }`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {secondMin > 0 ? `${secondMin.toFixed(0)}m` : "—"}
           </span>

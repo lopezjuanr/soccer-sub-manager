@@ -1,7 +1,7 @@
 /**
  * SetupScreen — Roster entry with drag-to-reorder
  * Design: Clean Coach's App — near-black bg, electric lime accents, Space Grotesk + DM Sans
- * Game duration is fixed at 40 minutes (each player must play at least 20 min)
+ * Game duration is fixed at 40 minutes (each player must play at least 16 min total, 7 min per half)
  * First 4 players in the list start on the field — drag to control who starts
  */
 
@@ -337,7 +337,7 @@ export default function SetupScreen() {
             className="text-white/30 text-xs text-center -mt-3"
             style={{ fontFamily: "'DM Sans', sans-serif" }}
           >
-            First 4 players start on the field · each must play ≥ 20 min
+            First 4 players start on the field · min 16 min total · 7 min per half
           </p>
         )}
       </div>

@@ -7,6 +7,7 @@ import { useGame } from "@/contexts/GameContext";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, RotateCcw, Trophy, Clock } from "lucide-react";
 import { motion } from "framer-motion";
+import { MIN_TOTAL_MINUTES, MIN_HALF_MINUTES, halfCounts } from "@/lib/gameEngine";
 
 function formatMinSec(totalMinutes: number) {
   const m = Math.floor(totalMinutes);
@@ -18,12 +19,10 @@ function formatMinSec(totalMinutes: number) {
 export default function SummaryScreen() {
   const { state, reset } = useGame();
   const { players, settings } = state;
-  const required = settings.totalMinutes / 2;
-
   const sorted = [...players].sort((a, b) => b.minutesPlayed - a.minutesPlayed);
-  const allMetMinimum = sorted.every((p) => p.minutesPlayed >= required);
+  const allMetMinimum = sorted.every((p) => p.minutesPlayed >= MIN_TOTAL_MINUTES);
   const allPlayedBothHalves = sorted.every(
-    (p) => p.firstHalfMinutes > 0 && p.secondHalfMinutes > 0
+    (p) => halfCounts(p.firstHalfMinutes) && halfCounts(p.secondHalfMinutes)
   );
   const allGood = allMetMinimum && allPlayedBothHalves;
   const totalPlayed = sorted.reduce((sum, p) => sum + p.minutesPlayed, 0);
@@ -53,7 +52,7 @@ export default function SummaryScreen() {
           className="text-white/50 text-sm mt-1"
           style={{ fontFamily: "'DM Sans', sans-serif" }}
         >
-          {settings.totalMinutes}-min game · {players.length} players · min {required} min each
+          {settings.totalMinutes}-min game · {players.length} players · min {MIN_TOTAL_MINUTES} min each
         </p>
 
         {/* Fair play status badges */}
@@ -70,9 +69,9 @@ export default function SummaryScreen() {
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             {allMetMinimum ? (
-              <><CheckCircle2 size={15} /> All players met {required}-min minimum</>
+              <><CheckCircle2 size={15} /> All players met {MIN_TOTAL_MINUTES}-min minimum</>
             ) : (
-              <><XCircle size={15} /> Some players missed the {required}-min minimum</>
+              <><XCircle size={15} /> Some players missed the {MIN_TOTAL_MINUTES}-min minimum</>
             )}
           </motion.div>
 
@@ -130,11 +129,11 @@ export default function SummaryScreen() {
 
           {/* Player rows */}
           {sorted.map((player, i) => {
-            const metMinimum = player.minutesPlayed >= required;
-            const playedFirst = player.firstHalfMinutes > 0;
-            const playedSecond = player.secondHalfMinutes > 0;
+            const metMinimum = player.minutesPlayed >= MIN_TOTAL_MINUTES;
+            const playedFirst = halfCounts(player.firstHalfMinutes);
+            const playedSecond = halfCounts(player.secondHalfMinutes);
             const allOk = metMinimum && playedFirst && playedSecond;
-            const pct = Math.min(100, (player.minutesPlayed / required) * 100);
+            const pct = Math.min(100, (player.minutesPlayed / MIN_TOTAL_MINUTES) * 100);
 
             return (
               <motion.div
@@ -227,7 +226,7 @@ export default function SummaryScreen() {
                         className="text-red-400/70 text-xs"
                         style={{ fontFamily: "'DM Sans', sans-serif" }}
                       >
-                        Did not play in the 1st half
+                        Less than {MIN_HALF_MINUTES} min in the 1st half
                       </span>
                     )}
                     {!playedSecond && (
@@ -235,7 +234,7 @@ export default function SummaryScreen() {
                         className="text-red-400/70 text-xs"
                         style={{ fontFamily: "'DM Sans', sans-serif" }}
                       >
-                        Did not play in the 2nd half
+                        Less than {MIN_HALF_MINUTES} min in the 2nd half
                       </span>
                     )}
                     {!metMinimum && (
@@ -243,7 +242,7 @@ export default function SummaryScreen() {
                         className="text-red-400/60 text-xs"
                         style={{ fontFamily: "'DM Sans', sans-serif" }}
                       >
-                        {formatMinSec(required - player.minutesPlayed)} short of {required}-min minimum
+                        {formatMinSec(MIN_TOTAL_MINUTES - player.minutesPlayed)} short of {MIN_TOTAL_MINUTES}-min minimum
                       </span>
                     )}
                   </div>
