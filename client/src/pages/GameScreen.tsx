@@ -362,17 +362,26 @@ export default function GameScreen() {
       </div>
 
       {/* ── Sub Window Dialog ── */}
-      <Dialog open={subDialogOpen} onOpenChange={() => {}}>
+      <Dialog open={subDialogOpen} onOpenChange={(open) => { if (!open) dismissSubWindow(); }}>
         <DialogContent className="bg-[#161b22] border-white/10 text-white max-w-sm mx-auto rounded-2xl p-0 overflow-hidden">
           <div className="bg-amber-500/10 border-b border-amber-500/20 px-5 py-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle size={18} className="text-amber-400" />
-              <DialogTitle
-                className="text-white font-bold text-lg"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={18} className="text-amber-400" />
+                <DialogTitle
+                  className="text-white font-bold text-lg"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  {SUB_WINDOWS.find((w) => w.id === activeWindow)?.label ?? "Substitution Time"}
+                </DialogTitle>
+              </div>
+              <button
+                onClick={dismissSubWindow}
+                className="w-8 h-8 rounded-lg border border-white/20 flex items-center justify-center text-white/60 hover:text-white hover:border-white/40 transition-colors shrink-0"
+                aria-label="Close and make manual substitution"
               >
-                {SUB_WINDOWS.find((w) => w.id === activeWindow)?.label ?? "Substitution Time"}
-              </DialogTitle>
+                ✕
+              </button>
             </div>
             <p className="text-white/50 text-sm mt-1" style={{ fontFamily: "'DM Sans', sans-serif" }}>
               Recommended substitutions to ensure fair play time
