@@ -84,16 +84,15 @@ function PlayerCard({
   return (
     <motion.div
       layout
-      className={`relative rounded-2xl p-4 border transition-all ${
-        player.status === "on"
-          ? `bg-white/8 ${colors.border} border`
-          : "bg-white/4 border-white/8 border"
-      } ${isRecommendedOut ? "ring-2 ring-red-500/60" : ""} ${
-        isRecommendedIn ? "ring-2 ring-[#a3e635]/60" : ""
-      }`}
+      className={[
+        "relative rounded-xl p-2.5 border transition-all",
+        player.status === "on" ? `bg-white/8 ${colors.border} border` : "bg-white/4 border-white/8 border",
+        isRecommendedOut ? "ring-2 ring-red-500/60" : "",
+        isRecommendedIn ? "ring-2 ring-[#a3e635]/60" : "",
+      ].join(" ")}
     >
       {/* Status badge */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-2">
           <UrgencyDot level={urgency} />
           <span
@@ -115,38 +114,17 @@ function PlayerCard({
             </span>
           )}
           <span
-            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              player.status === "on"
-                ? "bg-[#a3e635]/15 text-[#a3e635]"
-                : "bg-white/10 text-white/40"
-            }`}
+            className={`text-xs font-bold tabular-nums ${colors.text}`}
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            {player.status === "on" ? "ON FIELD" : "BENCH"}
+            {current.toFixed(1)}<span className="text-white/40 font-normal text-[10px] ml-0.5">m</span>
           </span>
         </div>
       </div>
 
-      {/* Time played */}
-      <div className="flex items-end justify-between mb-2">
-        <span
-          className={`text-2xl font-bold tabular-nums ${colors.text}`}
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          {current.toFixed(1)}
-          <span className="text-sm font-normal text-white/40 ml-1">min</span>
-        </span>
-        <span
-          className="text-xs text-white/40"
-          style={{ fontFamily: "'DM Sans', sans-serif" }}
-        >
-          need {MIN_TOTAL_MINUTES}
-        </span>
-      </div>
-
       {/* Per-half mini indicators */}
-      <div className="flex gap-2 mb-2">
-        <div className={`flex-1 flex items-center gap-1.5 rounded-lg px-2 py-1 ${
+      <div className="flex gap-2 mb-1.5">
+        <div className={`flex-1 flex items-center gap-1.5 rounded-lg px-2 py-0.5 ${
           halfCounts(firstMin) ? "bg-[#a3e635]/10" : half === 1 ? "bg-red-500/10" : "bg-white/5"
         }`}>
           <span className={`text-[9px] font-bold uppercase tracking-wider ${
@@ -158,7 +136,7 @@ function PlayerCard({
             {firstMin > 0 ? `${firstMin.toFixed(0)}m` : "—"}
           </span>
         </div>
-        <div className={`flex-1 flex items-center gap-1.5 rounded-lg px-2 py-1 ${
+        <div className={`flex-1 flex items-center gap-1.5 rounded-lg px-2 py-0.5 ${
           halfCounts(secondMin) ? "bg-[#a3e635]/10" : half === 2 ? "bg-red-500/10" : "bg-white/5"
         }`}>
           <span className={`text-[9px] font-bold uppercase tracking-wider ${
@@ -173,7 +151,7 @@ function PlayerCard({
       </div>
 
       {/* Progress bar */}
-      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+      <div className="h-1 bg-white/10 rounded-full overflow-hidden mt-1">
         <motion.div
           className={`h-full rounded-full ${colors.bar}`}
           initial={{ width: 0 }}
