@@ -5,7 +5,7 @@
 
 import { useGame } from "@/contexts/GameContext";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, RotateCcw, Trophy, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, RotateCcw, Trophy } from "lucide-react";
 import { motion } from "framer-motion";
 import { MIN_TOTAL_MINUTES, MIN_HALF_MINUTES, halfCounts } from "@/lib/gameEngine";
 
@@ -106,18 +106,22 @@ export default function SummaryScreen() {
             >
               Player
             </span>
-            <span
-              className="w-10 text-center text-white/40 text-xs font-bold uppercase tracking-widest"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              1st
-            </span>
-            <span
-              className="w-10 text-center text-white/40 text-xs font-bold uppercase tracking-widest"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              2nd
-            </span>
+            <div className="w-10 text-center shrink-0">
+              <span
+                className="text-white/40 text-xs font-bold uppercase tracking-widest"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                1st
+              </span>
+            </div>
+            <div className="w-10 text-center shrink-0">
+              <span
+                className="text-white/40 text-xs font-bold uppercase tracking-widest"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                2nd
+              </span>
+            </div>
             <span
               className="w-14 text-right text-white/40 text-xs font-bold uppercase tracking-widest"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -252,17 +256,7 @@ export default function SummaryScreen() {
           })}
         </div>
 
-        {/* Footer stat */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="flex items-center justify-center gap-2 mt-3 text-white/30 text-xs"
-          style={{ fontFamily: "'DM Sans', sans-serif" }}
-        >
-          <Clock size={12} />
-          <span>Total team minutes: {formatMinSec(totalPlayed)}</span>
-        </motion.div>
+
       </div>
 
       {/* New Game button */}
