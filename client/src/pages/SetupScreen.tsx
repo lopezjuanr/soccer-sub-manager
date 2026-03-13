@@ -332,14 +332,7 @@ export default function SetupScreen() {
           Start Game
         </Button>
 
-        {canStart && (
-          <p
-            className="text-white/30 text-xs text-center -mt-3"
-            style={{ fontFamily: "'DM Sans', sans-serif" }}
-          >
-            First 4 players start on the field · min 16 min total · 7 min per half
-          </p>
-        )}
+
       </div>
     </div>
   );
