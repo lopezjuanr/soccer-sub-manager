@@ -4,14 +4,13 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: # Allow manual trigger from GitHub UI
+  workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Only allow one deployment at a time
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -30,8 +29,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Install dependencies
         run: pnpm install
@@ -39,9 +36,7 @@ jobs:
       - name: Build
         run: pnpm build
         env:
-          # Base path must match your repo name for GitHub Pages
           VITE_BASE_PATH: /soccer-sub-manager/
-          # Stub out Manus-specific env vars so the build doesn't fail
           VITE_ANALYTICS_ENDPOINT: ""
           VITE_ANALYTICS_WEBSITE_ID: ""
           VITE_APP_ID: ""
