@@ -521,12 +521,9 @@ export default function GameScreen() {
 
           <div className="px-5 py-4 space-y-4">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
-                <p className="text-red-400 text-xs font-bold uppercase tracking-widest" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Coming Out
-                </p>
-              </div>
+              <p className="text-red-400 text-xs font-bold uppercase tracking-widest mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Player Out (on field)
+              </p>
               <div className="space-y-1.5">
                 {onField.map((p) => (
                   <button
@@ -553,12 +550,9 @@ export default function GameScreen() {
             </div>
 
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#a3e635] shrink-0" />
-                <p className="text-[#a3e635] text-xs font-bold uppercase tracking-widest" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Coming In
-                </p>
-              </div>
+              <p className="text-[#a3e635] text-xs font-bold uppercase tracking-widest mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Player In (bench)
+              </p>
               <div className="space-y-1.5">
                 {bench.map((p) => (
                   <button
