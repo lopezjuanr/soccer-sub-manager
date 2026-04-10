@@ -519,6 +519,58 @@ export default function GameScreen() {
             </p>
           </DialogHeader>
 
+          {/* Recommendations section */}
+          {pendingRecs.length > 0 && (
+            <div className="bg-amber-500/10 border-b border-amber-500/20 px-5 py-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} className="text-amber-400" />
+                <p className="text-amber-400 text-xs font-bold uppercase tracking-widest" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Recommended
+                </p>
+              </div>
+              
+              {/* Coming OUT section */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
+                  <span className="text-red-400 text-xs font-bold uppercase tracking-widest" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Coming Out
+                  </span>
+                </div>
+                <div className="bg-red-500/8 border border-red-500/15 rounded-lg px-3 py-2 space-y-1">
+                  {pendingRecs.map((rec, i) => (
+                    <div key={`rec-out-${i}`} className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-red-400">{i + 1}.</span>
+                      <span className="text-white text-sm font-semibold" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                        {rec.playerOut.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Coming IN section */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#a3e635] shrink-0" />
+                  <span className="text-[#a3e635] text-xs font-bold uppercase tracking-widest" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Coming In
+                  </span>
+                </div>
+                <div className="bg-[#a3e635]/8 border border-[#a3e635]/15 rounded-lg px-3 py-2 space-y-1">
+                  {pendingRecs.map((rec, i) => (
+                    <div key={`rec-in-${i}`} className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#a3e635]">{i + 1}.</span>
+                      <span className="text-white text-sm font-semibold" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                        {rec.playerIn.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="px-5 py-4 space-y-4">
             <div>
               <p className="text-red-400 text-xs font-bold uppercase tracking-widest mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
