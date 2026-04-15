@@ -114,16 +114,16 @@ function PlayerCard({
             </span>
           )}
           <span
-            className={`text-xs font-bold tabular-nums ${colors.text}`}
+            className={`text-lg font-bold tabular-nums ${colors.text}`}
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            {current.toFixed(1)}<span className="text-white/40 font-normal text-[10px] ml-0.5">m</span>
+            {current.toFixed(0)}<span className="text-white/40 font-normal text-xs ml-0.5">m</span>
           </span>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="h-1 bg-white/10 rounded-full overflow-hidden mt-1">
+      <div className="h-0.5 bg-white/10 rounded-full overflow-hidden mt-1">
         <motion.div
           className={`h-full rounded-full ${colors.bar}`}
           initial={{ width: 0 }}
