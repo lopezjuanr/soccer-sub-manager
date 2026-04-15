@@ -9,6 +9,12 @@ import { useState, useRef } from "react";
 import { useGame } from "@/contexts/GameContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { UserPlus, Trash2, Play, Users, GripVertical } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -129,6 +135,8 @@ export default function SetupScreen() {
   const { state, addPlayer, removePlayer, startGame, dispatch } = useGame();
   const [nameInput, setNameInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const [durationModalOpen, setDurationModalOpen] = useState(false);
+  const [selectedDuration, setSelectedDuration] = useState(40);
 
   const players = state.players;
   const canStart = players.length >= 5 && players.length <= 7;
@@ -173,6 +181,12 @@ export default function SetupScreen() {
       toast.error("Add 5–7 players to start");
       return;
     }
+    setDurationModalOpen(true);
+  }
+
+  function handleConfirmDuration() {
+    dispatch({ type: "SET_SETTINGS", settings: { totalMinutes: selectedDuration, fieldSize: 4 } });
+    setDurationModalOpen(false);
     startGame();
   }
 
@@ -332,8 +346,56 @@ export default function SetupScreen() {
           Start Game
         </Button>
 
-
       </div>
+
+      {/* Duration Selection Modal */}
+      <Dialog open={durationModalOpen} onOpenChange={setDurationModalOpen}>
+        <DialogContent className="bg-[#161b22] border-white/10 text-white max-w-sm mx-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle
+              className="text-white font-bold text-lg"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              Game Duration
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-white/50 text-sm" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            Select how long you want the game to be
+          </p>
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            {[20, 25, 30, 35, 40].map((duration) => (
+              <button
+                key={duration}
+                onClick={() => setSelectedDuration(duration)}
+                className={`py-3 rounded-xl font-semibold transition-all ${
+                  selectedDuration === duration
+                    ? "bg-[#a3e635] text-[#0d1117] ring-2 ring-[#a3e635]/50"
+                    : "bg-white/8 text-white hover:bg-white/15 border border-white/10"
+                }`}
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                {duration}m
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-4">
+            <Button
+              onClick={() => setDurationModalOpen(false)}
+              className="flex-1 h-11 rounded-xl bg-white/8 hover:bg-white/15 text-white"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmDuration}
+              className="flex-1 h-11 rounded-xl bg-[#a3e635] hover:bg-[#84cc16] text-[#0d1117] font-bold"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              Start {selectedDuration}m Game
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
