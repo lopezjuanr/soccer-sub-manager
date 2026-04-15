@@ -122,34 +122,6 @@ function PlayerCard({
         </div>
       </div>
 
-      {/* Per-half mini indicators */}
-      <div className="flex gap-2 mb-1.5">
-        <div className={`flex-1 flex items-center gap-1.5 rounded-lg px-2 py-0.5 ${
-          halfCounts(firstMin) ? "bg-[#a3e635]/10" : half === 1 ? "bg-red-500/10" : "bg-white/5"
-        }`}>
-          <span className={`text-[9px] font-bold uppercase tracking-wider ${
-            halfCounts(firstMin) ? "text-[#a3e635]/70" : half === 1 ? "text-red-400/80" : "text-white/25"
-          }`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>1st</span>
-          <span className={`text-xs font-semibold tabular-nums ${
-            halfCounts(firstMin) ? "text-[#a3e635]" : firstMin > 0 ? "text-amber-400" : half === 1 ? "text-red-400" : "text-white/25"
-          }`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            {firstMin > 0 ? `${firstMin.toFixed(0)}m` : "—"}
-          </span>
-        </div>
-        <div className={`flex-1 flex items-center gap-1.5 rounded-lg px-2 py-0.5 ${
-          halfCounts(secondMin) ? "bg-[#a3e635]/10" : half === 2 ? "bg-red-500/10" : "bg-white/5"
-        }`}>
-          <span className={`text-[9px] font-bold uppercase tracking-wider ${
-            halfCounts(secondMin) ? "text-[#a3e635]/70" : half === 2 ? "text-red-400/80" : "text-white/25"
-          }`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>2nd</span>
-          <span className={`text-xs font-semibold tabular-nums ${
-            halfCounts(secondMin) ? "text-[#a3e635]" : secondMin > 0 ? "text-amber-400" : half === 2 ? "text-red-400" : "text-white/25"
-          }`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            {secondMin > 0 ? `${secondMin.toFixed(0)}m` : "—"}
-          </span>
-        </div>
-      </div>
-
       {/* Progress bar */}
       <div className="h-1 bg-white/10 rounded-full overflow-hidden mt-1">
         <motion.div
