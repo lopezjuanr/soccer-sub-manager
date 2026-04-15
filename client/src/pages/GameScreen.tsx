@@ -520,43 +520,16 @@ export default function GameScreen() {
           </DialogHeader>
 
           <div className="px-5 py-4 space-y-4">
-            {/* Find player with most playing time and bench player with least playing time */}
-            {(() => {
-              const onFieldWithTime = onField.map(p => ({ ...p, time: effectiveMinutes(p, elapsedMinutes) }));
-              const benchWithTime = bench.map(p => ({ ...p, time: effectiveMinutes(p, elapsedMinutes) }));
-              const mostPlayedPlayer = onFieldWithTime.length > 0 ? onFieldWithTime.reduce((a, b) => a.time > b.time ? a : b) : null;
-              const leastPlayedBench = benchWithTime.length > 0 ? benchWithTime.reduce((a, b) => a.time < b.time ? a : b) : null;
-              return (
-                <>
-                  {mostPlayedPlayer && leastPlayedBench && (
-                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl px-4 py-3">
-                      <p className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                        💡 Suggested Swap
-                      </p>
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="text-red-400 font-semibold">{mostPlayedPlayer.name}</span>
-                          <span className="text-white/40 text-xs">({mostPlayedPlayer.time.toFixed(1)} min)</span>
-                        </div>
-                        <span className="text-white/40">↔</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[#a3e635] font-semibold">{leastPlayedBench.name}</span>
-                          <span className="text-white/40 text-xs">({leastPlayedBench.time.toFixed(1)} min)</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </>
-              );
-            })()}
             <div>
               <p className="text-red-400 text-xs font-bold uppercase tracking-widest mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 Player Out (on field)
               </p>
               <div className="space-y-1.5">
                 {onField.map((p) => {
-                  const mostPlayedOnField = onField.reduce((a, b) => effectiveMinutes(a, elapsedMinutes) > effectiveMinutes(b, elapsedMinutes) ? a : b, onField[0]);
-                  const isMostPlayed = p.id === mostPlayedOnField.id;
+                  // Find max playing time among all on-field players
+                  const maxPlayTime = Math.max(...onField.map(pl => effectiveMinutes(pl, elapsedMinutes)));
+                  // Check if this player has the max playing time
+                  const shouldComeOut = effectiveMinutes(p, elapsedMinutes) === maxPlayTime;
                   return (
                     <button
                       key={p.id}
@@ -568,19 +541,17 @@ export default function GameScreen() {
                       className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
                         selectedOut.has(p.id)
                           ? "bg-red-500/20 border-red-500/50 text-white"
-                          : isMostPlayed
-                          ? "bg-red-500/10 border-red-500/30 text-white ring-1 ring-red-500/20"
                           : "bg-white/5 border-white/8 text-white/70 hover:bg-white/10"
                       }`}
                       style={{ fontFamily: "'DM Sans', sans-serif" }}
                     >
-                      <span className="flex items-center justify-between">
-                        <span>{p.name}<span className="text-xs text-white/40 ml-2">{effectiveMinutes(p, elapsedMinutes).toFixed(1)} min</span></span>
-                        <div className="flex items-center gap-1">
-                          {isMostPlayed && <span className="text-[10px] font-bold text-red-400 bg-red-500/30 px-2 py-0.5 rounded-full">MOST TIME</span>}
-                          {selectedOut.has(p.id) && <span className="text-[10px] font-bold text-red-400 bg-red-500/20 px-2 py-0.5 rounded-full">OUT</span>}
-                        </div>
-                      </span>
+                        <span className="flex items-center justify-between">
+                          <span>{p.name}<span className="text-xs text-white/40 ml-2">{effectiveMinutes(p, elapsedMinutes).toFixed(1)} min</span></span>
+                          <div className="flex items-center gap-1">
+                            {shouldComeOut && <span className="text-xs font-bold text-red-400">🔴</span>}
+                            {selectedOut.has(p.id) && <span className="text-[10px] font-bold text-red-400 bg-red-500/20 px-2 py-0.5 rounded-full">OUT</span>}
+                          </div>
+                        </span>
                     </button>
                   );
                 })}
@@ -593,8 +564,10 @@ export default function GameScreen() {
               </p>
               <div className="space-y-1.5">
                 {bench.map((p) => {
-                  const leastPlayedBench = bench.reduce((a, b) => effectiveMinutes(a, elapsedMinutes) < effectiveMinutes(b, elapsedMinutes) ? a : b, bench[0]);
-                  const isLeastPlayed = p.id === leastPlayedBench.id;
+                  // Find min playing time among all bench players
+                  const minPlayTime = Math.min(...bench.map(pl => effectiveMinutes(pl, elapsedMinutes)));
+                  // Check if this player has the min playing time
+                  const shouldComeIn = effectiveMinutes(p, elapsedMinutes) === minPlayTime;
                   return (
                     <button
                       key={p.id}
@@ -606,19 +579,17 @@ export default function GameScreen() {
                       className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
                         selectedIn.has(p.id)
                           ? "bg-[#a3e635]/20 border-[#a3e635]/50 text-white"
-                          : isLeastPlayed
-                          ? "bg-[#a3e635]/10 border-[#a3e635]/30 text-white ring-1 ring-[#a3e635]/20"
                           : "bg-white/5 border-white/8 text-white/70 hover:bg-white/10"
                       }`}
                       style={{ fontFamily: "'DM Sans', sans-serif" }}
                     >
-                      <span className="flex items-center justify-between">
-                        <span>{p.name}<span className="text-xs text-white/40 ml-2">{effectiveMinutes(p, elapsedMinutes).toFixed(1)} min</span></span>
-                        <div className="flex items-center gap-1">
-                          {isLeastPlayed && <span className="text-[10px] font-bold text-[#a3e635] bg-[#a3e635]/30 px-2 py-0.5 rounded-full">LEAST TIME</span>}
-                          {selectedIn.has(p.id) && <span className="text-[10px] font-bold text-[#a3e635] bg-[#a3e635]/20 px-2 py-0.5 rounded-full">IN</span>}
-                        </div>
-                      </span>
+                        <span className="flex items-center justify-between">
+                          <span>{p.name}<span className="text-xs text-white/40 ml-2">{effectiveMinutes(p, elapsedMinutes).toFixed(1)} min</span></span>
+                          <div className="flex items-center gap-1">
+                            {shouldComeIn && <span className="text-xs font-bold text-[#a3e635]">🟢</span>}
+                            {selectedIn.has(p.id) && <span className="text-[10px] font-bold text-[#a3e635] bg-[#a3e635]/20 px-2 py-0.5 rounded-full">IN</span>}
+                          </div>
+                        </span>
                     </button>
                   );
                 })}
