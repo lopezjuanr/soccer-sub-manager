@@ -20,11 +20,9 @@ export default function SummaryScreen() {
   const { state, reset } = useGame();
   const { players, settings } = state;
   const sorted = [...players].sort((a, b) => b.minutesPlayed - a.minutesPlayed);
-  const allMetMinimum = sorted.every((p) => p.minutesPlayed >= MIN_TOTAL_MINUTES);
-  const allPlayedBothHalves = sorted.every(
-    (p) => halfCounts(p.firstHalfMinutes) && halfCounts(p.secondHalfMinutes)
-  );
-  const allGood = allMetMinimum && allPlayedBothHalves;
+  const minTotalMinutes = Math.round(settings.totalMinutes / 2);
+  const allMetMinimum = sorted.every((p) => p.minutesPlayed >= minTotalMinutes);
+  const allGood = allMetMinimum;
   const totalPlayed = sorted.reduce((sum, p) => sum + p.minutesPlayed, 0);
 
   return (
@@ -52,7 +50,7 @@ export default function SummaryScreen() {
           className="text-white/50 text-sm mt-1"
           style={{ fontFamily: "'DM Sans', sans-serif" }}
         >
-          {settings.totalMinutes}-min game · {players.length} players · min {MIN_TOTAL_MINUTES} min each
+          {settings.totalMinutes}-min game · {players.length} players · min {minTotalMinutes} min each
         </p>
 
         {/* Fair play status badges */}
@@ -69,29 +67,13 @@ export default function SummaryScreen() {
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             {allMetMinimum ? (
-              <><CheckCircle2 size={15} /> All players met {MIN_TOTAL_MINUTES}-min minimum</>
+              <><CheckCircle2 size={15} /> All players met {minTotalMinutes}-min minimum</>
             ) : (
-              <><XCircle size={15} /> Some players missed the {MIN_TOTAL_MINUTES}-min minimum</>
+              <><XCircle size={15} /> Some players missed the {minTotalMinutes}-min minimum</>
             )}
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${
-              allPlayedBothHalves
-                ? "bg-[#a3e635]/15 text-[#a3e635] border border-[#a3e635]/25"
-                : "bg-red-500/15 text-red-400 border border-red-500/25"
-            }`}
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            {allPlayedBothHalves ? (
-              <><CheckCircle2 size={15} /> All players played in both halves</>
-            ) : (
-              <><XCircle size={15} /> Some players missed a half</>
-            )}
-          </motion.div>
+
         </div>
       </div>
 
@@ -133,11 +115,11 @@ export default function SummaryScreen() {
 
           {/* Player rows */}
           {sorted.map((player, i) => {
-            const metMinimum = player.minutesPlayed >= MIN_TOTAL_MINUTES;
+            const metMinimum = player.minutesPlayed >= minTotalMinutes;
             const playedFirst = halfCounts(player.firstHalfMinutes);
             const playedSecond = halfCounts(player.secondHalfMinutes);
-            const allOk = metMinimum && playedFirst && playedSecond;
-            const pct = Math.min(100, (player.minutesPlayed / MIN_TOTAL_MINUTES) * 100);
+            const allOk = metMinimum;
+            const pct = Math.min(100, (player.minutesPlayed / minTotalMinutes) * 100);
 
             return (
               <motion.div
