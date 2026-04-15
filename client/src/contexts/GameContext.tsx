@@ -507,43 +507,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   ]);
 
   // ── Auto-trigger sub windows ──
+  // Disabled: no automatic substitution windows. Coaches use manual subs only.
   useEffect(() => {
     if (state.screen !== "game" || !state.isRunning) return;
     const totalSec = state.settings.totalMinutes * 60;
-    const windows: { id: SubWindow; sec: number }[] = [
-      { id: "mid-first", sec: totalSec * 0.25 },
-      { id: "halftime", sec: totalSec * 0.5 },
-      { id: "mid-second", sec: totalSec * 0.75 },
-    ];
-    for (const w of windows) {
-      // For mid-half windows (not halftime), skip the dialog if the coach
-      // already made at least one manual sub since the last completed window.
-      const isMidHalf = w.id === "mid-first" || w.id === "mid-second";
-      const alreadySubbed = state.subsSinceLastWindow > 0;
-      if (
-        state.elapsedSeconds >= w.sec &&
-        !state.completedWindows.includes(w.id) &&
-        state.activeWindow !== w.id
-      ) {
-        if (isMidHalf && alreadySubbed) {
-          // Coach already made a manual sub — silently mark this window done
-          dispatch({ type: "COMPLETE_SUB_WINDOW", window: w.id });
-        } else {
-          const recs = computeRecommendations(
-            state.players,
-            elapsedMinutes,
-            state.settings,
-            state.completedWindows,
-            w.id
-          );
-          dispatch({ type: "OPEN_SUB_DIALOG", window: w.id, recs });
-          if (typeof navigator !== "undefined" && navigator.vibrate) {
-            navigator.vibrate([300, 100, 300]);
-          }
-        }
-        break;
-      }
-    }
+    // Check if game is over
     if (state.elapsedSeconds >= totalSec) {
       dispatch({ type: "END_GAME" });
     }

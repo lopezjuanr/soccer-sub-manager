@@ -8,7 +8,7 @@
  * - Each player must play at least 16 min total in a 40-min game
  * - Every player must play at least 7 min in EACH half (1st and 2nd)
  *   — a half with fewer than 7 min does NOT count as "played in that half"
- * - 3 substitution windows: mid-first-half (10 min), halftime (20 min), mid-second-half (30 min)
+ * - No automatic substitution windows — coaches use manual substitutions only
  *
  * Half definitions (40-min game):
  *   First half:  0:00 – 20:00
@@ -62,14 +62,10 @@ export const MIN_TOTAL_MINUTES = 16;
 export const MIN_HALF_MINUTES = 7;
 
 /**
- * The 3 substitution windows as fractions of total game time.
+ * The substitution windows as fractions of total game time.
+ * Empty array means no automatic substitution windows — coaches can only use manual subs.
  */
-export const SUB_WINDOWS: { id: SubWindow; label: string; fraction: number }[] =
-  [
-    { id: "mid-first", label: "Mid 1st Half", fraction: 0.25 },
-    { id: "halftime", label: "Halftime", fraction: 0.5 },
-    { id: "mid-second", label: "Mid 2nd Half", fraction: 0.75 },
-  ];
+export const SUB_WINDOWS: { id: SubWindow; label: string; fraction: number }[] = [];
 
 /** Which half a given elapsed-minute value falls in (1 or 2). */
 export function currentHalf(elapsed: number, settings: GameSettings): 1 | 2 {
