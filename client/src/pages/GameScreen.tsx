@@ -16,6 +16,7 @@ export default function GameScreen() {
     applySubstitution,
     endGame,
     resumeFromHalftime,
+    skipToNextWindow,
   } = useGame();
 
   const [selectedOut, setSelectedOut] = useState<string | null>(null);
@@ -216,6 +217,13 @@ export default function GameScreen() {
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
           🔄 Sub
+        </button>
+        <button
+          onClick={() => skipToNextWindow()}
+          className="flex-1 h-10 bg-[#161b22] border border-white/10 text-white rounded-lg hover:border-white/20 font-bold text-xs"
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          ⏩ Skip
         </button>
         <button
           onClick={() => setEndConfirmOpen(true)}
