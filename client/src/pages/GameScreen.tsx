@@ -145,6 +145,8 @@ export default function GameScreen() {
     dismissSubWindow,
     skipToNextWindow,
     endGame,
+    closeHaltimeDialog,
+    resumeFromHalftime,
   } = useGame();
 
   const [manualSubOpen, setManualSubOpen] = useState(false);
@@ -608,6 +610,44 @@ export default function GameScreen() {
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               Confirm Sub
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Halftime Dialog ── */}
+      <Dialog open={state.haltimeDialogOpen} onOpenChange={(open) => {
+        if (!open) closeHaltimeDialog();
+      }}>
+        <DialogContent className="bg-[#161b22] border-white/10 text-white max-w-sm mx-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle
+              className="text-white font-bold text-lg"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              ⏸ Halftime
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-white/50 text-sm" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            The clock is paused. Make substitutions if needed, then resume the game.
+          </p>
+          <div className="flex gap-2 mt-4">
+            <Button
+              onClick={() => {
+                setManualSubOpen(true);
+                closeHaltimeDialog();
+              }}
+              className="flex-1 h-11 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              Make Subs
+            </Button>
+            <Button
+              onClick={() => resumeFromHalftime()}
+              className="flex-1 h-11 rounded-xl bg-[#a3e635] hover:bg-[#84cc16] text-[#0d1117] font-bold"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              Resume
             </Button>
           </div>
         </DialogContent>
