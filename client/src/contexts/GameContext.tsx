@@ -211,10 +211,6 @@ export interface GameState {
   activeWindow: SubWindow | null;
   /** Number of manual subs made since the last completed sub window */
   subsSinceLastWindow: number;
-  /** Whether halftime dialog is open */
-  haltimeDialogOpen: boolean;
-  /** Whether halftime has been shown (to prevent re-triggering) */
-  haltimeShown: boolean;
 }
 
 function buildInitialState(): GameState {
@@ -229,8 +225,6 @@ function buildInitialState(): GameState {
     subDialogOpen: false,
     activeWindow: null,
     subsSinceLastWindow: 0,
-    haltimeDialogOpen: false,
-    haltimeShown: false,
   };
 
   const saved = loadGameSnapshot();
@@ -261,10 +255,7 @@ type Action =
   | { type: "COMPLETE_SUB_WINDOW"; window: SubWindow }
   | { type: "SKIP_TO_NEXT_WINDOW" }
   | { type: "END_GAME" }
-  | { type: "RESET" }
-  | { type: "OPEN_HALFTIME_DIALOG" }
-  | { type: "CLOSE_HALFTIME_DIALOG" }
-  | { type: "RESUME_FROM_HALFTIME" };
+  | { type: "RESET" };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
@@ -436,19 +427,8 @@ function reducer(state: GameState, action: Action): GameState {
         subDialogOpen: false,
         activeWindow: null,
         subsSinceLastWindow: 0,
-        haltimeDialogOpen: false,
-        haltimeShown: false,
       };
     }
-
-    case "OPEN_HALFTIME_DIALOG":
-      return { ...state, haltimeDialogOpen: true, isRunning: false, haltimeShown: true };
-
-    case "CLOSE_HALFTIME_DIALOG":
-      return { ...state, haltimeDialogOpen: false };
-
-    case "RESUME_FROM_HALFTIME":
-      return { ...state, haltimeDialogOpen: false, isRunning: true };
 
     default:
       return state;
@@ -470,9 +450,6 @@ interface GameContextValue {
   skipToNextWindow: () => void;
   endGame: () => void;
   reset: () => void;
-  openHaltimeDialog: () => void;
-  closeHaltimeDialog: () => void;
-  resumeFromHalftime: () => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -550,18 +527,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     elapsedMinutes,
   ]);
 
-  // ── Halftime pause ──
-  // Pause the clock at halftime and show dialog
-  useEffect(() => {
-    if (state.screen !== "game" || !state.isRunning || state.haltimeShown) return;
-    const halfwaySec = (state.settings.totalMinutes * 60) / 2;
-    // Trigger halftime dialog when we reach halftime (only once per game)
-    if (state.elapsedSeconds >= halfwaySec && !state.haltimeShown) {
-      dispatch({ type: "OPEN_HALFTIME_DIALOG" });
-    }
-  }, [state.elapsedSeconds, state.screen, state.isRunning, state.haltimeShown, state.settings]);
-
-
   const addPlayer = useCallback(
     (name: string) => {
       const player: Player = {
@@ -614,9 +579,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
   const endGame = useCallback(() => dispatch({ type: "END_GAME" }), []);
   const reset = useCallback(() => dispatch({ type: "RESET" }), []);
-  const openHaltimeDialog = useCallback(() => dispatch({ type: "OPEN_HALFTIME_DIALOG" }), []);
-  const closeHaltimeDialog = useCallback(() => dispatch({ type: "CLOSE_HALFTIME_DIALOG" }), []);
-  const resumeFromHalftime = useCallback(() => dispatch({ type: "RESUME_FROM_HALFTIME" }), []);
 
   return (
     <GameContext.Provider
@@ -633,9 +595,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         skipToNextWindow,
         endGame,
         reset,
-        openHaltimeDialog,
-        closeHaltimeDialog,
-        resumeFromHalftime,
       }}
     >
       {children}
