@@ -55,7 +55,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   fieldSize: 4,
 };
 
-/** Minimum total minutes a player must play in the game (deprecated — use dynamic calculation) */
+/** Minimum total minutes a player must play in the game */
 export const MIN_TOTAL_MINUTES = 16;
 
 /** Minimum minutes in a single half for it to count as "played in that half" */
@@ -63,12 +63,9 @@ export const MIN_HALF_MINUTES = 7;
 
 /**
  * The substitution windows as fractions of total game time.
- * Halftime is included to trigger the halftime pause dialog.
- * Other windows (mid-first, mid-second) are excluded — coaches use manual subs only.
+ * Empty array means no automatic substitution windows — coaches can only use manual subs.
  */
-export const SUB_WINDOWS: { id: SubWindow; label: string; fraction: number }[] = [
-  { id: "halftime", label: "Halftime", fraction: 0.5 },
-];
+export const SUB_WINDOWS: { id: SubWindow; label: string; fraction: number }[] = [];
 
 /** Which half a given elapsed-minute value falls in (1 or 2). */
 export function currentHalf(elapsed: number, settings: GameSettings): 1 | 2 {

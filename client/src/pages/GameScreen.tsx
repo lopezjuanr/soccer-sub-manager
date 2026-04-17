@@ -196,17 +196,12 @@ export default function GameScreen() {
     setSelectedOut(new Set());
     setSelectedIn(new Set());
     setManualSubOpen(false);
-    // Always try to resume from halftime after substitution
-    // This will close the halftime dialog and resume the game if it's open
-    resumeFromHalftime();
     toast.success(`${outIds.length} substitution${outIds.length > 1 ? "s" : ""} applied`);
   }
 
   function handleApplyRec(outId: string, inId: string) {
     applySubstitution(outId, inId);
     setAppliedRecs((prev) => new Set(prev).add(`${outId}-${inId}`));
-    // Always try to resume from halftime after substitution
-    resumeFromHalftime();
   }
 
   return (
@@ -621,7 +616,42 @@ export default function GameScreen() {
       </Dialog>
 
       {/* ── Halftime Dialog ── */}
-      {/* Halftime feature: clock pauses at halftime, user can make subs manually */}
+      <Dialog open={state.haltimeDialogOpen} onOpenChange={(open) => {
+        if (!open) closeHaltimeDialog();
+      }}>
+        <DialogContent className="bg-[#161b22] border-white/10 text-white max-w-sm mx-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle
+              className="text-white font-bold text-lg"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              ⏸ Halftime
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-white/50 text-sm" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            The clock is paused. Make substitutions if needed, then resume the game.
+          </p>
+          <div className="flex gap-2 mt-4">
+            <Button
+              onClick={() => {
+                setManualSubOpen(true);
+                closeHaltimeDialog();
+              }}
+              className="flex-1 h-11 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              Make Subs
+            </Button>
+            <Button
+              onClick={() => resumeFromHalftime()}
+              className="flex-1 h-11 rounded-xl bg-[#a3e635] hover:bg-[#84cc16] text-[#0d1117] font-bold"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              Resume
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── End Game Confirm ── */}
       <Dialog open={endConfirmOpen} onOpenChange={setEndConfirmOpen}>
