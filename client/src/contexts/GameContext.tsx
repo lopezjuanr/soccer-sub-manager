@@ -213,6 +213,8 @@ export interface GameState {
   subsSinceLastWindow: number;
   /** Whether halftime dialog is open */
   haltimeDialogOpen: boolean;
+  /** Whether halftime has been shown (to prevent re-triggering) */
+  haltimeShown: boolean;
 }
 
 function buildInitialState(): GameState {
@@ -228,6 +230,7 @@ function buildInitialState(): GameState {
     activeWindow: null,
     subsSinceLastWindow: 0,
     haltimeDialogOpen: false,
+    haltimeShown: false,
   };
 
   const saved = loadGameSnapshot();
@@ -434,11 +437,12 @@ function reducer(state: GameState, action: Action): GameState {
         activeWindow: null,
         subsSinceLastWindow: 0,
         haltimeDialogOpen: false,
+        haltimeShown: false,
       };
     }
 
     case "OPEN_HALFTIME_DIALOG":
-      return { ...state, haltimeDialogOpen: true, isRunning: false };
+      return { ...state, haltimeDialogOpen: true, isRunning: false, haltimeShown: true };
 
     case "CLOSE_HALFTIME_DIALOG":
       return { ...state, haltimeDialogOpen: false };
@@ -549,13 +553,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // ── Halftime pause ──
   // Pause the clock at halftime and show dialog
   useEffect(() => {
-    if (state.screen !== "game" || !state.isRunning || state.haltimeDialogOpen) return;
+    if (state.screen !== "game" || !state.isRunning || state.haltimeShown) return;
     const halfwaySec = (state.settings.totalMinutes * 60) / 2;
-    // Trigger halftime dialog when we reach halftime
-    if (state.elapsedSeconds >= halfwaySec && !state.haltimeDialogOpen) {
+    // Trigger halftime dialog when we reach halftime (only once per game)
+    if (state.elapsedSeconds >= halfwaySec && !state.haltimeShown) {
       dispatch({ type: "OPEN_HALFTIME_DIALOG" });
     }
-  }, [state.elapsedSeconds, state.screen, state.isRunning, state.haltimeDialogOpen, state.settings]);
+  }, [state.elapsedSeconds, state.screen, state.isRunning, state.haltimeShown, state.settings]);
 
 
   const addPlayer = useCallback(
