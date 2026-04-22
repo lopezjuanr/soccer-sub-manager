@@ -2,6 +2,12 @@
  * Soccer Sub Manager — Game State Context
  * Design: Clean Coach's App — near-black + electric lime, urgency-coded player cards
  *
+ * Halftime rule:
+ * - Clock automatically pauses at exactly totalMinutes/2 * 60 seconds.
+ * - atHalftime flag is set to true.
+ * - Clock does NOT resume until the coach confirms a substitution while atHalftime is true.
+ * - Only HALFTIME_SUB_CONFIRMED clears atHalftime and resumes the clock.
+ *
  * Persistence strategy:
  * - ROSTER_KEY: stores player names only (persists across games)
  * - GAME_KEY: stores the full live game state snapshot + a wall-clock anchor
@@ -67,13 +73,6 @@ function saveRoster(players: Player[]) {
 
 // ─── Game snapshot helpers ────────────────────────────────────────────────────
 
-/**
- * What we persist for the live game.
- * `clockAnchorMs` is the wall-clock time (Date.now()) when the game was last
- * resumed. On reload we add (now - clockAnchorMs) / 1000 to elapsedSeconds so
- * the clock is accurate even after the tab was closed.
- * It is null when the clock is paused (e.g. halftime).
- */
 interface GameSnapshot {
   screen: AppScreen;
   players: Player[];
@@ -83,13 +82,13 @@ interface GameSnapshot {
   completedWindows: SubWindow[];
   subDialogOpen: boolean;
   activeWindow: SubWindow | null;
+  atHalftime: boolean;
   /** Wall-clock ms when the clock was last started/resumed. Null when paused. */
   clockAnchorMs: number | null;
 }
 
 function saveGameSnapshot(state: GameState, clockAnchorMs: number | null) {
   if (state.screen === "setup") {
-    // Nothing to persist during setup — roster key handles player names
     localStorage.removeItem(GAME_KEY);
     return;
   }
@@ -103,6 +102,7 @@ function saveGameSnapshot(state: GameState, clockAnchorMs: number | null) {
       completedWindows: state.completedWindows,
       subDialogOpen: state.subDialogOpen,
       activeWindow: state.activeWindow,
+      atHalftime: state.atHalftime,
       clockAnchorMs,
     };
     localStorage.setItem(GAME_KEY, JSON.stringify(snap));
@@ -119,11 +119,6 @@ function clearGameSnapshot() {
   }
 }
 
-/**
- * Load and reconstruct game state from localStorage.
- * If the clock was running when the tab closed, we fast-forward elapsed seconds
- * by the real time that passed since `clockAnchorMs`.
- */
 function loadGameSnapshot(): Partial<GameState> | null {
   try {
     const raw = localStorage.getItem(GAME_KEY);
@@ -136,7 +131,6 @@ function loadGameSnapshot(): Partial<GameState> | null {
     if (snap.isRunning && snap.clockAnchorMs !== null) {
       const realElapsed = Math.floor((Date.now() - snap.clockAnchorMs) / 1000);
       elapsedSeconds = snap.elapsedSeconds + realElapsed;
-      // Cap at total game time
       const totalSec = snap.settings.totalMinutes * 60;
       elapsedSeconds = Math.min(elapsedSeconds, totalSec);
     }
@@ -144,7 +138,6 @@ function loadGameSnapshot(): Partial<GameState> | null {
     // If the game ended while the tab was closed, go straight to summary
     const totalSec = snap.settings.totalMinutes * 60;
     if (elapsedSeconds >= totalSec && snap.screen === "game") {
-      // Finalize on-field players' minutes
       const elapsedMin = totalSec / 60;
       const players = snap.players.map((p) => {
         if (p.status === "on" && p.lastOnAt !== null) {
@@ -168,22 +161,22 @@ function loadGameSnapshot(): Partial<GameState> | null {
         pendingRecs: [],
         subDialogOpen: false,
         activeWindow: null,
+        atHalftime: false,
       };
     }
 
-    // If we're restoring mid-game, close any open sub dialog so the coach
-    // can see the current state cleanly. The auto-trigger effect will re-open
-    // it if we're still at a sub window threshold.
     return {
       screen: snap.screen,
       players: snap.players,
       settings: snap.settings,
       elapsedSeconds,
-      isRunning: snap.screen === "game", // resume clock if game was live
+      // If we were at halftime (clock paused waiting for sub), stay paused
+      isRunning: snap.screen === "game" && !snap.atHalftime,
       completedWindows: snap.completedWindows,
       pendingRecs: [],
       subDialogOpen: false,
       activeWindow: null,
+      atHalftime: snap.atHalftime ?? false,
     };
   } catch {
     return null;
@@ -211,6 +204,11 @@ export interface GameState {
   activeWindow: SubWindow | null;
   /** Number of manual subs made since the last completed sub window */
   subsSinceLastWindow: number;
+  /**
+   * True when the clock has been paused at halftime and is waiting for
+   * the coach to confirm a substitution before resuming.
+   */
+  atHalftime: boolean;
 }
 
 function buildInitialState(): GameState {
@@ -225,6 +223,7 @@ function buildInitialState(): GameState {
     subDialogOpen: false,
     activeWindow: null,
     subsSinceLastWindow: 0,
+    atHalftime: false,
   };
 
   const saved = loadGameSnapshot();
@@ -233,7 +232,6 @@ function buildInitialState(): GameState {
   return {
     ...base,
     ...saved,
-    // pendingRecs are always recomputed, never restored from storage
     pendingRecs: [],
   };
 }
@@ -249,6 +247,8 @@ type Action =
   | { type: "TICK" }
   | { type: "PAUSE" }
   | { type: "RESUME" }
+  | { type: "PAUSE_FOR_HALFTIME" }
+  | { type: "HALFTIME_SUB_CONFIRMED" }
   | { type: "OPEN_SUB_DIALOG"; window: SubWindow; recs: SubRecommendation[] }
   | { type: "CLOSE_SUB_DIALOG" }
   | { type: "APPLY_SUB"; playerOutId: string; playerInId: string }
@@ -288,6 +288,7 @@ function reducer(state: GameState, action: Action): GameState {
         subDialogOpen: false,
         activeWindow: null,
         subsSinceLastWindow: 0,
+        atHalftime: false,
       };
     }
 
@@ -298,13 +299,26 @@ function reducer(state: GameState, action: Action): GameState {
       return { ...state, isRunning: false };
 
     case "RESUME":
+      // Only allow manual resume if NOT waiting for a halftime sub
+      if (state.atHalftime) return state;
       return { ...state, isRunning: true };
+
+    case "PAUSE_FOR_HALFTIME":
+      // Stop the clock and mark that we are waiting for a halftime substitution
+      return { ...state, isRunning: false, atHalftime: true };
+
+    case "HALFTIME_SUB_CONFIRMED":
+      // Coach has confirmed a sub during halftime — clear the flag and restart clock
+      return {
+        ...state,
+        atHalftime: false,
+        isRunning: true,
+        subsSinceLastWindow: 0,
+      };
 
     case "OPEN_SUB_DIALOG":
       return {
         ...state,
-        // Only pause the clock at halftime; mid-half windows keep the clock running
-        isRunning: action.window === "halftime" ? false : state.isRunning,
         subDialogOpen: true,
         activeWindow: action.window,
         pendingRecs: action.recs,
@@ -318,7 +332,6 @@ function reducer(state: GameState, action: Action): GameState {
       const halfPoint = state.settings.totalMinutes / 2;
       const players = state.players.map((p) => {
         if (p.id === action.playerOutId) {
-          // Commit the stint's minutes split across halves
           const stintStart = p.lastOnAt ?? elapsed;
           const stintEnd = elapsed;
           const firstAdd = Math.max(0, Math.min(stintEnd, halfPoint) - Math.min(stintStart, halfPoint));
@@ -346,7 +359,6 @@ function reducer(state: GameState, action: Action): GameState {
         completedWindows: [...state.completedWindows, action.window],
         subDialogOpen: false,
         activeWindow: null,
-        // Always ensure clock is running when dismissing a sub window
         isRunning: true,
         subsSinceLastWindow: 0,
       };
@@ -354,22 +366,15 @@ function reducer(state: GameState, action: Action): GameState {
 
     case "SKIP_TO_NEXT_WINDOW": {
       const totalSec = state.settings.totalMinutes * 60;
-      const windows = [
-        { id: "mid-first" as SubWindow, sec: totalSec * 0.25 },
-        { id: "halftime" as SubWindow, sec: totalSec * 0.5 },
-        { id: "mid-second" as SubWindow, sec: totalSec * 0.75 },
-      ];
-      const next = windows.find(
-        (w) =>
-          !state.completedWindows.includes(w.id) &&
-          state.elapsedSeconds < w.sec
-      );
-      if (next) {
-        // Jump to 60 seconds BEFORE the window so the coach has time to react
-        const targetSec = Math.max(state.elapsedSeconds + 1, Math.floor(next.sec) - 60);
+      const halftimeSec = totalSec * 0.5;
+
+      // If we haven't hit halftime yet, jump to just before halftime
+      if (state.elapsedSeconds < halftimeSec) {
+        const targetSec = Math.max(state.elapsedSeconds + 1, Math.floor(halftimeSec) - 10);
         return { ...state, elapsedSeconds: targetSec };
       }
-      // No more sub windows — skip to end of game
+
+      // If we're past halftime, skip to end of game
       const elapsed = totalSec / 60;
       const halfPoint = state.settings.totalMinutes / 2;
       const players = state.players.map((p) => {
@@ -388,7 +393,7 @@ function reducer(state: GameState, action: Action): GameState {
         }
         return p;
       });
-      return { ...state, screen: "summary", isRunning: false, players };
+      return { ...state, screen: "summary", isRunning: false, atHalftime: false, players };
     }
 
     case "END_GAME": {
@@ -411,7 +416,7 @@ function reducer(state: GameState, action: Action): GameState {
         return p;
       });
       clearGameSnapshot();
-      return { ...state, screen: "summary", isRunning: false, players };
+      return { ...state, screen: "summary", isRunning: false, atHalftime: false, players };
     }
 
     case "RESET": {
@@ -427,6 +432,7 @@ function reducer(state: GameState, action: Action): GameState {
         subDialogOpen: false,
         activeWindow: null,
         subsSinceLastWindow: 0,
+        atHalftime: false,
       };
     }
 
@@ -445,6 +451,7 @@ interface GameContextValue {
   removePlayer: (id: string) => void;
   startGame: () => void;
   applySubstitution: (playerOutId: string, playerInId: string) => void;
+  confirmHalftimeSub: (playerOutIds: string[], playerInIds: string[]) => void;
   completeSubWindow: () => void;
   dismissSubWindow: () => void;
   skipToNextWindow: () => void;
@@ -459,27 +466,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedMinutes = state.elapsedSeconds / 60;
 
-  /**
-   * clockAnchorRef tracks the wall-clock time (Date.now()) when the clock was
-   * last started or resumed. We update it whenever isRunning flips to true and
-   * clear it when the clock stops. This is used to persist accurate elapsed
-   * time to localStorage so a tab refresh can recover real game time.
-   */
   const clockAnchorRef = useRef<number | null>(
-    // If we're restoring a running game, anchor to now (we already fast-forwarded
-    // elapsed seconds in loadGameSnapshot, so now is the correct new anchor).
     initialState.isRunning ? Date.now() : null
   );
 
   // ── Timer ──
   useEffect(() => {
     if (state.isRunning && state.screen === "game") {
-      // (Re)start the clock — update anchor
       clockAnchorRef.current = Date.now();
       timerRef.current = setInterval(() => dispatch({ type: "TICK" }), 1000);
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
-      // Clock stopped — clear anchor
       if (!state.isRunning) clockAnchorRef.current = null;
     }
     return () => {
@@ -487,10 +484,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   }, [state.isRunning, state.screen]);
 
-  // ── Persist game state to localStorage on every meaningful change ──
+  // ── Persist game state to localStorage ──
   useEffect(() => {
     if (state.screen === "summary") {
-      // Game is over — clear the live snapshot so next load starts fresh
       clearGameSnapshot();
       return;
     }
@@ -504,27 +500,41 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     state.subDialogOpen,
     state.activeWindow,
     state.settings,
+    state.atHalftime,
   ]);
 
-  // ── Auto-trigger sub windows ──
-  // Disabled: no automatic substitution windows. Coaches use manual subs only.
+  // ── Halftime auto-pause ──
+  // Fires when the clock hits exactly the halftime second.
+  // Only triggers once per game (guarded by !state.atHalftime and
+  // !completedWindows includes a "halftime" sentinel).
   useEffect(() => {
     if (state.screen !== "game" || !state.isRunning) return;
+
+    const halftimeSec = state.settings.totalMinutes * 30; // totalMinutes/2 * 60
     const totalSec = state.settings.totalMinutes * 60;
-    // Check if game is over
+
+    // Check for game over
     if (state.elapsedSeconds >= totalSec) {
       dispatch({ type: "END_GAME" });
+      return;
+    }
+
+    // Trigger halftime pause when clock reaches halftime second
+    // Guard: only if we haven't already been through halftime this game
+    if (
+      state.elapsedSeconds >= halftimeSec &&
+      !state.atHalftime &&
+      !state.completedWindows.includes("halftime")
+    ) {
+      dispatch({ type: "PAUSE_FOR_HALFTIME" });
     }
   }, [
     state.elapsedSeconds,
     state.screen,
     state.isRunning,
+    state.atHalftime,
     state.completedWindows,
-    state.activeWindow,
-    state.players,
     state.settings,
-    state.subsSinceLastWindow,
-    elapsedMinutes,
   ]);
 
   const addPlayer = useCallback(
@@ -561,6 +571,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  /**
+   * Apply one or more substitutions during halftime and restart the clock.
+   * This is the ONLY path that resumes the clock after halftime.
+   */
+  const confirmHalftimeSub = useCallback(
+    (playerOutIds: string[], playerInIds: string[]) => {
+      // Apply each sub pair
+      playerOutIds.forEach((outId, i) => {
+        dispatch({ type: "APPLY_SUB", playerOutId: outId, playerInId: playerInIds[i] });
+      });
+      // Mark halftime as done and restart clock
+      dispatch({ type: "COMPLETE_SUB_WINDOW", window: "halftime" });
+      dispatch({ type: "HALFTIME_SUB_CONFIRMED" });
+    },
+    []
+  );
+
   const completeSubWindow = useCallback(() => {
     if (state.activeWindow) {
       dispatch({ type: "COMPLETE_SUB_WINDOW", window: state.activeWindow });
@@ -590,6 +617,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         removePlayer,
         startGame,
         applySubstitution,
+        confirmHalftimeSub,
         completeSubWindow,
         dismissSubWindow,
         skipToNextWindow,
