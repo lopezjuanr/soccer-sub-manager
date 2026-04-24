@@ -162,6 +162,8 @@ function loadGameSnapshot(): Partial<GameState> | null {
         subDialogOpen: false,
         activeWindow: null,
         atHalftime: false,
+        scoreUs: 0,
+        scoreThem: 0,
       };
     }
 
@@ -209,6 +211,10 @@ export interface GameState {
    * the coach to confirm a substitution before resuming.
    */
   atHalftime: boolean;
+  /** Live score — our team */
+  scoreUs: number;
+  /** Live score — opponent */
+  scoreThem: number;
 }
 
 function buildInitialState(): GameState {
@@ -224,6 +230,8 @@ function buildInitialState(): GameState {
     activeWindow: null,
     subsSinceLastWindow: 0,
     atHalftime: false,
+    scoreUs: 0,
+    scoreThem: 0,
   };
 
   const saved = loadGameSnapshot();
@@ -255,6 +263,8 @@ type Action =
   | { type: "COMPLETE_SUB_WINDOW"; window: SubWindow }
   | { type: "SKIP_TO_NEXT_WINDOW" }
   | { type: "END_GAME" }
+  | { type: "SCORE_INCREMENT"; team: "us" | "them" }
+  | { type: "SCORE_DECREMENT"; team: "us" | "them" }
   | { type: "RESET" };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
@@ -289,6 +299,8 @@ function reducer(state: GameState, action: Action): GameState {
         activeWindow: null,
         subsSinceLastWindow: 0,
         atHalftime: false,
+        scoreUs: 0,
+        scoreThem: 0,
       };
     }
 
@@ -419,6 +431,16 @@ function reducer(state: GameState, action: Action): GameState {
       return { ...state, screen: "summary", isRunning: false, atHalftime: false, players };
     }
 
+    case "SCORE_INCREMENT": {
+      if (action.team === "us") return { ...state, scoreUs: state.scoreUs + 1 };
+      return { ...state, scoreThem: state.scoreThem + 1 };
+    }
+
+    case "SCORE_DECREMENT": {
+      if (action.team === "us") return { ...state, scoreUs: Math.max(0, state.scoreUs - 1) };
+      return { ...state, scoreThem: Math.max(0, state.scoreThem - 1) };
+    }
+
     case "RESET": {
       const savedRoster = loadSavedRoster();
       return {
@@ -433,6 +455,8 @@ function reducer(state: GameState, action: Action): GameState {
         activeWindow: null,
         subsSinceLastWindow: 0,
         atHalftime: false,
+        scoreUs: 0,
+        scoreThem: 0,
       };
     }
 
@@ -457,6 +481,8 @@ interface GameContextValue {
   skipToNextWindow: () => void;
   endGame: () => void;
   reset: () => void;
+  incrementScore: (team: "us" | "them") => void;
+  decrementScore: (team: "us" | "them") => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -606,6 +632,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
   const endGame = useCallback(() => dispatch({ type: "END_GAME" }), []);
   const reset = useCallback(() => dispatch({ type: "RESET" }), []);
+  const incrementScore = useCallback(
+    (team: "us" | "them") => dispatch({ type: "SCORE_INCREMENT", team }),
+    []
+  );
+  const decrementScore = useCallback(
+    (team: "us" | "them") => dispatch({ type: "SCORE_DECREMENT", team }),
+    []
+  );
 
   return (
     <GameContext.Provider
@@ -623,6 +657,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         skipToNextWindow,
         endGame,
         reset,
+        incrementScore,
+        decrementScore,
       }}
     >
       {children}

@@ -155,6 +155,8 @@ export default function GameScreen() {
     dismissSubWindow,
     skipToNextWindow,
     endGame,
+    incrementScore,
+    decrementScore,
   } = useGame();
 
   const [manualSubOpen, setManualSubOpen] = useState(false);
@@ -172,6 +174,8 @@ export default function GameScreen() {
     completedWindows,
     activeWindow,
     atHalftime,
+    scoreUs,
+    scoreThem,
   } = state;
 
   // Keep the screen awake for the entire game session
@@ -275,6 +279,50 @@ export default function GameScreen() {
               style={{ fontFamily: "'DM Sans', sans-serif" }}
             >
               / {settings.totalMinutes}:00
+            </div>
+          </div>
+        </div>
+
+        {/* Score widget */}
+        <div className="flex items-center justify-center gap-0 mt-3 mb-1">
+          {/* US */}
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase mb-0.5"
+              style={{ fontFamily: "'DM Sans', sans-serif" }}>Us</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => decrementScore("us")}
+                className="w-6 h-6 rounded-full bg-white/8 hover:bg-white/15 text-white/50 hover:text-white text-sm font-bold leading-none transition-colors"
+                aria-label="Decrease our score"
+              >−</button>
+              <button
+                onClick={() => incrementScore("us")}
+                className="w-14 h-14 rounded-2xl bg-white/8 hover:bg-[#a3e635]/20 active:scale-95 transition-all text-white font-bold text-4xl tabular-nums"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                aria-label="Increase our score"
+              >{scoreUs}</button>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <span className="text-white/25 text-3xl font-light mx-3 mt-4">—</span>
+
+          {/* THEM */}
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase mb-0.5"
+              style={{ fontFamily: "'DM Sans', sans-serif" }}>Them</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => incrementScore("them")}
+                className="w-14 h-14 rounded-2xl bg-white/8 hover:bg-red-500/20 active:scale-95 transition-all text-white font-bold text-4xl tabular-nums"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                aria-label="Increase their score"
+              >{scoreThem}</button>
+              <button
+                onClick={() => decrementScore("them")}
+                className="w-6 h-6 rounded-full bg-white/8 hover:bg-white/15 text-white/50 hover:text-white text-sm font-bold leading-none transition-colors"
+                aria-label="Decrease their score"
+              >−</button>
             </div>
           </div>
         </div>
