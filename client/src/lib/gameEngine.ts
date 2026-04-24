@@ -3,7 +3,7 @@
  * Design: Clean Coach's App — near-black + electric lime, urgency-coded player cards
  *
  * Game rules:
- * - 5–7 players on roster
+ * - 4–7 players on roster
  * - 4 players on field at a time
  * - Each player must play at least 16 min total in a 40-min game
  * - Every player must play at least 7 min in EACH half (1st and 2nd)

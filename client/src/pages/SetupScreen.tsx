@@ -139,7 +139,7 @@ export default function SetupScreen() {
   const [selectedDuration, setSelectedDuration] = useState(40);
 
   const players = state.players;
-  const canStart = players.length >= 5 && players.length <= 7;
+  const canStart = players.length >= 4 && players.length <= 7;
 
   // dnd-kit sensors — support both mouse and touch with a small activation distance
   const sensors = useSensors(
@@ -178,7 +178,7 @@ export default function SetupScreen() {
 
   function handleStart() {
     if (!canStart) {
-      toast.error("Add 5–7 players to start");
+      toast.error("Add 4–7 players to start");
       return;
     }
     setDurationModalOpen(true);
@@ -313,20 +313,20 @@ export default function SetupScreen() {
                     className="text-center py-8 text-white/30 text-sm"
                     style={{ fontFamily: "'DM Sans', sans-serif" }}
                   >
-                    Add 5–7 players to get started
+                    Add 4–7 players to get started
                   </div>
                 )}
               </div>
             </SortableContext>
           </DndContext>
 
-          {players.length > 0 && players.length < 5 && (
+          {players.length > 0 && players.length < 4 && (
             <p
               className="text-amber-400/80 text-xs text-center mt-3"
               style={{ fontFamily: "'DM Sans', sans-serif" }}
             >
-              Add {5 - players.length} more player
-              {5 - players.length !== 1 ? "s" : ""} to start
+              Add {4 - players.length} more player
+              {4 - players.length !== 1 ? "s" : ""} to start
             </p>
           )}
         </section>
