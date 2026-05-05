@@ -204,35 +204,6 @@ export default function SummaryScreen() {
                   </div>
                 </div>
 
-                {/* Issue notes */}
-                {(!metMinimum || !playedFirst || !playedSecond) && (
-                  <div className="px-4 pb-2.5 -mt-1 flex flex-col gap-0.5">
-                    {!playedFirst && (
-                      <span
-                        className="text-red-400/70 text-xs"
-                        style={{ fontFamily: "'DM Sans', sans-serif" }}
-                      >
-                        Less than {MIN_HALF_MINUTES} min in the 1st half
-                      </span>
-                    )}
-                    {!playedSecond && (
-                      <span
-                        className="text-red-400/70 text-xs"
-                        style={{ fontFamily: "'DM Sans', sans-serif" }}
-                      >
-                        Less than {MIN_HALF_MINUTES} min in the 2nd half
-                      </span>
-                    )}
-                    {!metMinimum && (
-                      <span
-                        className="text-red-400/60 text-xs"
-                        style={{ fontFamily: "'DM Sans', sans-serif" }}
-                      >
-                        {formatMinSec(MIN_TOTAL_MINUTES - player.minutesPlayed)} short of {MIN_TOTAL_MINUTES}-min minimum
-                      </span>
-                    )}
-                  </div>
-                )}
               </motion.div>
             );
           })}
