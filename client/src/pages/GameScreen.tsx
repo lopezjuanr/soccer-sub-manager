@@ -407,22 +407,35 @@ export default function GameScreen() {
                   className="text-amber-400/60 text-xs mt-0.5"
                   style={{ fontFamily: "'DM Sans', sans-serif" }}
                 >
-                  Make a substitution to start the second half
+                  {bench.length === 0
+                    ? "No bench players — continue when ready"
+                    : "Make a substitution to start the second half"}
                 </p>
               </div>
             </div>
-            <Button
-              onClick={() => {
-                setSelectedOut(new Set());
-                setSelectedIn(new Set());
-                setManualSubOpen(true);
-              }}
-              className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#0d1117] font-bold text-sm mt-1"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              <ArrowLeftRight size={16} className="mr-2" />
-              Make Substitution
-            </Button>
+            {bench.length === 0 ? (
+              <Button
+                onClick={() => confirmHalftimeSub([], [])}
+                className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#0d1117] font-bold text-sm mt-1"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                <Flag size={16} className="mr-2" />
+                Continue to 2nd Half
+              </Button>
+            ) : (
+              <Button
+                onClick={() => {
+                  setSelectedOut(new Set());
+                  setSelectedIn(new Set());
+                  setManualSubOpen(true);
+                }}
+                className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#0d1117] font-bold text-sm mt-1"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                <ArrowLeftRight size={16} className="mr-2" />
+                Make Substitution
+              </Button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
