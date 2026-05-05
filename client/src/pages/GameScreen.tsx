@@ -451,7 +451,7 @@ export default function GameScreen() {
             <span className="w-1.5 h-1.5 rounded-full bg-[#a3e635] animate-pulse" />
             On Field ({onField.length}/{settings.fieldSize})
           </h2>
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
             {onField.map((p) => (
               <PlayerCard
                 key={p.id}
@@ -475,7 +475,7 @@ export default function GameScreen() {
             >
               Bench ({bench.length})
             </h2>
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
               {bench.map((p) => (
               <PlayerCard
                 key={p.id}
