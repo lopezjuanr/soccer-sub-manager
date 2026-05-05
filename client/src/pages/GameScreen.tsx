@@ -491,7 +491,7 @@ export default function GameScreen() {
           setManualSubOpen(open);
         }}
       >
-        <DialogContent className="bg-[#161b22] border-white/10 text-white max-w-sm mx-auto rounded-2xl p-0 overflow-hidden">
+        <DialogContent className="bg-[#161b22] border-white/10 text-white max-w-sm mx-auto rounded-2xl p-0 overflow-hidden flex flex-col max-h-[85vh]">
           <DialogHeader className="px-5 pt-5 pb-0">
             <DialogTitle
               className="text-white font-bold text-lg"
@@ -506,7 +506,7 @@ export default function GameScreen() {
             </p>
           </DialogHeader>
 
-          <div className="px-5 py-4 space-y-4">
+          <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1 min-h-0">
             {/* Player Out */}
             <div>
               <p
@@ -515,7 +515,7 @@ export default function GameScreen() {
               >
                 Player Out (on field)
               </p>
-              <div className="space-y-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {onField.map((p) => {
                   const maxPlayTime = Math.max(
                     ...onField.map((pl) => effectiveMinutes(pl, elapsedMinutes))
@@ -533,7 +533,7 @@ export default function GameScreen() {
                           return next;
                         })
                       }
-                      className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
+                      className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all ${
                         selectedOut.has(p.id)
                           ? "bg-red-500/20 border-red-500/50 text-white"
                           : "bg-white/5 border-white/8 text-white/70 hover:bg-white/10"
@@ -572,7 +572,7 @@ export default function GameScreen() {
               >
                 Player In (bench)
               </p>
-              <div className="space-y-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {bench.map((p) => {
                   const minPlayTime = Math.min(
                     ...bench.map((pl) => effectiveMinutes(pl, elapsedMinutes))
@@ -590,7 +590,7 @@ export default function GameScreen() {
                           return next;
                         })
                       }
-                      className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
+                      className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all ${
                         selectedIn.has(p.id)
                           ? "bg-[#a3e635]/20 border-[#a3e635]/50 text-white"
                           : "bg-white/5 border-white/8 text-white/70 hover:bg-white/10"
