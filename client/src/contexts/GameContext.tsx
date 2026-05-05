@@ -36,7 +36,8 @@ import {
 
 // ─── Storage keys ────────────────────────────────────────────────────────────
 
-const ROSTER_KEY = "soccer-sub-manager-roster";
+const ROSTER_KEY_PREFIX = "soccer-sub-manager-roster";
+function rosterKey(group: AgeGroup) { return `${ROSTER_KEY_PREFIX}-${group}`; }
 const GAME_KEY = "soccer-sub-manager-game";
 const AGE_GROUP_KEY = "soccer-sub-manager-age-group";
 
@@ -86,9 +87,9 @@ export function saveAgeGroup(group: AgeGroup) {
 
 // ─── Roster helpers ───────────────────────────────────────────────────────────
 
-function loadSavedRoster(): Player[] {
+function loadSavedRoster(group: AgeGroup): Player[] {
   try {
-    const raw = localStorage.getItem(ROSTER_KEY);
+    const raw = localStorage.getItem(rosterKey(group));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as { id: string; name: string }[];
     return parsed.map((p) => ({
@@ -105,10 +106,10 @@ function loadSavedRoster(): Player[] {
   }
 }
 
-function saveRoster(players: Player[]) {
+function saveRoster(group: AgeGroup, players: Player[]) {
   try {
     localStorage.setItem(
-      ROSTER_KEY,
+      rosterKey(group),
       JSON.stringify(players.map((p) => ({ id: p.id, name: p.name })))
     );
   } catch {
@@ -268,7 +269,7 @@ function buildInitialState(): GameState {
   const base: GameState = {
     screen: "splash",
     ageGroup: savedGroup,
-    players: loadSavedRoster(),
+    players: loadSavedRoster(savedGroup),
     settings: DEFAULT_SETTINGS,
     elapsedSeconds: 0,
     isRunning: false,
@@ -331,7 +332,7 @@ function reducer(state: GameState, action: Action): GameState {
         ...state,
         ageGroup: action.group,
         screen: "setup",
-        players: loadSavedRoster(),
+        players: loadSavedRoster(action.group),
         settings: { ...state.settings, fieldSize: cfg.fieldSize, totalMinutes: cfg.defaultDuration },
         elapsedSeconds: 0,
         isRunning: false,
@@ -347,7 +348,7 @@ function reducer(state: GameState, action: Action): GameState {
     }
 
     case "SET_ROSTER":
-      saveRoster(action.players);
+      saveRoster(state.ageGroup, action.players);
       return { ...state, players: action.players };
 
     case "SET_SETTINGS":
@@ -517,7 +518,7 @@ function reducer(state: GameState, action: Action): GameState {
     }
 
     case "RESET": {
-      const savedRoster = loadSavedRoster();
+      const savedRoster = loadSavedRoster(state.ageGroup);
       const cfg = AGE_GROUP_CONFIG[state.ageGroup];
       return {
         screen: "setup",
