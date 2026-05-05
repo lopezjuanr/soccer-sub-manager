@@ -68,19 +68,23 @@ function PlayerCard({
   player,
   elapsedSeconds,
   totalMinutes,
+  fieldSize,
+  targetMinutes,
   isRecommendedOut,
   isRecommendedIn,
 }: {
   player: ReturnType<typeof useGame>["state"]["players"][0];
   elapsedSeconds: number;
   totalMinutes: number;
+  fieldSize: number;
+  targetMinutes: number;
   isRecommendedOut?: boolean;
   isRecommendedIn?: boolean;
 }) {
   const elapsedMin = elapsedSeconds / 60;
-  const settings = { totalMinutes, fieldSize: 4 };
+  const settings = { totalMinutes, fieldSize };
   const { total: current } = effectiveHalfMinutes(player, elapsedMin, settings);
-  const pct = Math.min(100, (current / MIN_TOTAL_MINUTES) * 100);
+  const pct = Math.min(100, (current / targetMinutes) * 100);
   const urgency = playerUrgency(player, elapsedMin, settings, []);
 
   const urgencyColors: Record<UrgencyLevel, { bar: string; text: string; border: string }> = {
@@ -184,6 +188,13 @@ export default function GameScreen() {
   const onField = players.filter((p) => p.status === "on");
   const bench = players.filter((p) => p.status === "off");
   const totalSec = settings.totalMinutes * 60;
+
+  // Target playing time: proportional to game length and roster size
+  // Each player should get roughly equal time: (totalMinutes * fieldSize) / totalPlayers
+  const totalPlayers = players.length;
+  const targetMinutes = totalPlayers > 0
+    ? Math.round((settings.totalMinutes * settings.fieldSize) / totalPlayers)
+    : MIN_TOTAL_MINUTES;
   const gameProgressPct = Math.min(100, (elapsedSeconds / totalSec) * 100);
 
   const recOutIds = new Set(pendingRecs.map((r) => r.playerOut.id));
@@ -425,7 +436,7 @@ export default function GameScreen() {
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#a3e635] animate-pulse" />
-            On Field ({onField.length}/4)
+            On Field ({onField.length}/{settings.fieldSize})
           </h2>
           <div className="space-y-2">
             {onField.map((p) => (
@@ -434,6 +445,8 @@ export default function GameScreen() {
                 player={p}
                 elapsedSeconds={elapsedSeconds}
                 totalMinutes={settings.totalMinutes}
+                fieldSize={settings.fieldSize}
+                targetMinutes={targetMinutes}
                 isRecommendedOut={recOutIds.has(p.id)}
               />
             ))}
@@ -451,13 +464,15 @@ export default function GameScreen() {
             </h2>
             <div className="space-y-2">
               {bench.map((p) => (
-                <PlayerCard
-                  key={p.id}
-                  player={p}
-                  elapsedSeconds={elapsedSeconds}
-                  totalMinutes={settings.totalMinutes}
-                  isRecommendedIn={recInIds.has(p.id)}
-                />
+              <PlayerCard
+                key={p.id}
+                player={p}
+                elapsedSeconds={elapsedSeconds}
+                totalMinutes={settings.totalMinutes}
+                fieldSize={settings.fieldSize}
+                targetMinutes={targetMinutes}
+                isRecommendedIn={recInIds.has(p.id)}
+              />
               ))}
             </div>
           </section>

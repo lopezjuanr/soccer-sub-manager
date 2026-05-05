@@ -1,12 +1,15 @@
 /**
  * SetupScreen — Roster entry with drag-to-reorder
  * Design: Clean Coach's App — near-black bg, electric lime accents, Space Grotesk + DM Sans
- * Game duration is fixed at 40 minutes (each player must play at least 16 min total, 7 min per half)
- * First 4 players in the list start on the field — drag to control who starts
+ *
+ * Age-group aware:
+ *  8U:  4–7 players, first 4 start, default 40 min, durations 20/25/30/35/40
+ *  11U: 8–14 players, first 10 start, default 60 min, durations 40/45/50/55/60
  */
 
 import { useState, useRef } from "react";
 import { useGame } from "@/contexts/GameContext";
+import { AGE_GROUP_CONFIG } from "@/contexts/GameContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { UserPlus, Trash2, Play, Users, GripVertical } from "lucide-react";
+import { UserPlus, Trash2, Play, Users, GripVertical, ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
@@ -45,10 +48,12 @@ const FIELD_BG =
 function SortablePlayerRow({
   player,
   index,
+  starterCount,
   onRemove,
 }: {
   player: Player;
   index: number;
+  starterCount: number;
   onRemove: (id: string) => void;
 }) {
   const {
@@ -67,7 +72,7 @@ function SortablePlayerRow({
     zIndex: isDragging ? 50 : undefined,
   };
 
-  const isStarter = index < 4;
+  const isStarter = index < starterCount;
 
   return (
     <div
@@ -136,12 +141,20 @@ export default function SetupScreen() {
   const [nameInput, setNameInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const [durationModalOpen, setDurationModalOpen] = useState(false);
-  const [selectedDuration, setSelectedDuration] = useState(40);
+
+  const cfg = AGE_GROUP_CONFIG[state.ageGroup];
+  const [selectedDuration, setSelectedDuration] = useState(cfg.defaultDuration);
 
   const players = state.players;
-  const canStart = players.length >= 4 && players.length <= 7;
+  const canStart = players.length >= cfg.minRoster && players.length <= cfg.maxRoster;
 
-  // dnd-kit sensors — support both mouse and touch with a small activation distance
+  // Duration options per age group
+  const durationOptions =
+    state.ageGroup === "8u"
+      ? [20, 25, 30, 35, 40]
+      : [40, 45, 50, 55, 60];
+
+  // dnd-kit sensors
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
@@ -159,8 +172,8 @@ export default function SetupScreen() {
   function handleAddPlayer() {
     const name = nameInput.trim();
     if (!name) return;
-    if (players.length >= 7) {
-      toast.error("Maximum 7 players allowed");
+    if (players.length >= cfg.maxRoster) {
+      toast.error(`Maximum ${cfg.maxRoster} players allowed`);
       return;
     }
     if (players.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
@@ -178,17 +191,26 @@ export default function SetupScreen() {
 
   function handleStart() {
     if (!canStart) {
-      toast.error("Add 4–7 players to start");
+      toast.error(`Add ${cfg.minRoster}–${cfg.maxRoster} players to start`);
       return;
     }
     setDurationModalOpen(true);
   }
 
   function handleConfirmDuration() {
-    dispatch({ type: "SET_SETTINGS", settings: { totalMinutes: selectedDuration, fieldSize: 4 } });
+    dispatch({
+      type: "SET_SETTINGS",
+      settings: { totalMinutes: selectedDuration, fieldSize: cfg.fieldSize },
+    });
     setDurationModalOpen(false);
     startGame();
   }
+
+  const needMore = players.length < cfg.minRoster ? cfg.minRoster - players.length : 0;
+  const subtitleText =
+    state.ageGroup === "8u"
+      ? `8U · 4v4 · ${cfg.defaultDuration}-Minute Game`
+      : `11U · 10v10 · ${cfg.defaultDuration}-Minute Game`;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0d1117]">
@@ -200,6 +222,17 @@ export default function SetupScreen() {
           className="absolute inset-0 w-full h-full object-cover object-center opacity-60"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117]/20 via-transparent to-[#0d1117]" />
+
+        {/* Back to splash */}
+        <button
+          onClick={() => dispatch({ type: "GO_TO_SPLASH" } as never)}
+          className="absolute top-4 left-4 z-20 flex items-center gap-1 text-white/50 hover:text-white text-sm transition-colors"
+          style={{ fontFamily: "'DM Sans', sans-serif" }}
+        >
+          <ChevronLeft size={16} />
+          Change mode
+        </button>
+
         <div className="relative z-10 flex flex-col items-center justify-end h-full pb-4 px-4">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[#a3e635] text-2xl">⚽</span>
@@ -214,7 +247,7 @@ export default function SetupScreen() {
             className="text-white/60 text-sm"
             style={{ fontFamily: "'DM Sans', sans-serif" }}
           >
-            8U · 4v4 · 40-Minute Game
+            {subtitleText}
           </p>
         </div>
       </div>
@@ -242,7 +275,7 @@ export default function SetupScreen() {
               }`}
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              {players.length} / 7
+              {players.length} / {cfg.maxRoster}
             </span>
           </div>
 
@@ -257,11 +290,11 @@ export default function SetupScreen() {
               className="flex-1 bg-white/8 border-white/15 text-white placeholder:text-white/30 focus:border-[#a3e635] focus:ring-[#a3e635]/20 rounded-xl h-12"
               style={{ fontFamily: "'DM Sans', sans-serif" }}
               maxLength={20}
-              disabled={players.length >= 7}
+              disabled={players.length >= cfg.maxRoster}
             />
             <Button
               onClick={handleAddPlayer}
-              disabled={!nameInput.trim() || players.length >= 7}
+              disabled={!nameInput.trim() || players.length >= cfg.maxRoster}
               className="h-12 w-12 rounded-xl bg-[#a3e635] hover:bg-[#84cc16] text-[#0d1117] p-0 shrink-0"
             >
               <UserPlus size={20} />
@@ -275,7 +308,7 @@ export default function SetupScreen() {
               style={{ fontFamily: "'DM Sans', sans-serif" }}
             >
               <GripVertical size={11} />
-              Drag to reorder — top 4 start on the field
+              Drag to reorder — top {cfg.starterCount} start on the field
             </p>
           )}
 
@@ -302,6 +335,7 @@ export default function SetupScreen() {
                       <SortablePlayerRow
                         player={player}
                         index={index}
+                        starterCount={cfg.starterCount}
                         onRemove={removePlayer}
                       />
                     </motion.div>
@@ -313,20 +347,19 @@ export default function SetupScreen() {
                     className="text-center py-8 text-white/30 text-sm"
                     style={{ fontFamily: "'DM Sans', sans-serif" }}
                   >
-                    Add 4–7 players to get started
+                    Add {cfg.minRoster}–{cfg.maxRoster} players to get started
                   </div>
                 )}
               </div>
             </SortableContext>
           </DndContext>
 
-          {players.length > 0 && players.length < 4 && (
+          {players.length > 0 && needMore > 0 && (
             <p
               className="text-amber-400/80 text-xs text-center mt-3"
               style={{ fontFamily: "'DM Sans', sans-serif" }}
             >
-              Add {4 - players.length} more player
-              {4 - players.length !== 1 ? "s" : ""} to start
+              Add {needMore} more player{needMore !== 1 ? "s" : ""} to start
             </p>
           )}
         </section>
@@ -363,7 +396,7 @@ export default function SetupScreen() {
             Select how long you want the game to be
           </p>
           <div className="grid grid-cols-2 gap-2 mt-4">
-            {[20, 25, 30, 35, 40].map((duration) => (
+            {durationOptions.map((duration) => (
               <button
                 key={duration}
                 onClick={() => setSelectedDuration(duration)}

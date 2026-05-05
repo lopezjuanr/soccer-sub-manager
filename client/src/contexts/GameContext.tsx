@@ -38,6 +38,51 @@ import {
 
 const ROSTER_KEY = "soccer-sub-manager-roster";
 const GAME_KEY = "soccer-sub-manager-game";
+const AGE_GROUP_KEY = "soccer-sub-manager-age-group";
+
+// ─── Age-group config ─────────────────────────────────────────────────────────
+
+export type AgeGroup = "8u" | "11u";
+
+export interface AgeGroupConfig {
+  label: string;
+  fieldSize: number;
+  minRoster: number;
+  maxRoster: number;
+  defaultDuration: number;
+  starterCount: number;
+}
+
+export const AGE_GROUP_CONFIG: Record<AgeGroup, AgeGroupConfig> = {
+  "8u": {
+    label: "8U",
+    fieldSize: 4,
+    minRoster: 4,
+    maxRoster: 7,
+    defaultDuration: 40,
+    starterCount: 4,
+  },
+  "11u": {
+    label: "11U",
+    fieldSize: 10,
+    minRoster: 8,
+    maxRoster: 14,
+    defaultDuration: 60,
+    starterCount: 10,
+  },
+};
+
+export function loadSavedAgeGroup(): AgeGroup {
+  try {
+    const raw = localStorage.getItem(AGE_GROUP_KEY);
+    if (raw === "8u" || raw === "11u") return raw;
+  } catch { /* ignore */ }
+  return "8u";
+}
+
+export function saveAgeGroup(group: AgeGroup) {
+  try { localStorage.setItem(AGE_GROUP_KEY, group); } catch { /* ignore */ }
+}
 
 // ─── Roster helpers ───────────────────────────────────────────────────────────
 
@@ -187,10 +232,11 @@ function loadGameSnapshot(): Partial<GameState> | null {
 
 // ─── State ───────────────────────────────────────────────────────────────────
 
-export type AppScreen = "setup" | "game" | "summary";
+export type AppScreen = "splash" | "setup" | "game" | "summary";
 
 export interface GameState {
   screen: AppScreen;
+  ageGroup: AgeGroup;
   players: Player[];
   settings: GameSettings;
   /** Game clock in seconds */
@@ -218,8 +264,10 @@ export interface GameState {
 }
 
 function buildInitialState(): GameState {
+  const savedGroup = loadSavedAgeGroup();
   const base: GameState = {
-    screen: "setup",
+    screen: "splash",
+    ageGroup: savedGroup,
     players: loadSavedRoster(),
     settings: DEFAULT_SETTINGS,
     elapsedSeconds: 0,
@@ -249,6 +297,7 @@ const initialState: GameState = buildInitialState();
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
 type Action =
+  | { type: "SELECT_AGE_GROUP"; group: AgeGroup }
   | { type: "SET_ROSTER"; players: Player[] }
   | { type: "SET_SETTINGS"; settings: GameSettings }
   | { type: "START_GAME" }
@@ -265,12 +314,38 @@ type Action =
   | { type: "END_GAME" }
   | { type: "SCORE_INCREMENT"; team: "us" | "them" }
   | { type: "SCORE_DECREMENT"; team: "us" | "them" }
+  | { type: "GO_TO_SPLASH" }
   | { type: "RESET" };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
 function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
+    case "GO_TO_SPLASH":
+      return { ...state, screen: "splash" };
+
+    case "SELECT_AGE_GROUP": {
+      saveAgeGroup(action.group);
+      const cfg = AGE_GROUP_CONFIG[action.group];
+      return {
+        ...state,
+        ageGroup: action.group,
+        screen: "setup",
+        players: loadSavedRoster(),
+        settings: { ...state.settings, fieldSize: cfg.fieldSize, totalMinutes: cfg.defaultDuration },
+        elapsedSeconds: 0,
+        isRunning: false,
+        completedWindows: [],
+        pendingRecs: [],
+        subDialogOpen: false,
+        activeWindow: null,
+        subsSinceLastWindow: 0,
+        atHalftime: false,
+        scoreUs: 0,
+        scoreThem: 0,
+      };
+    }
+
     case "SET_ROSTER":
       saveRoster(action.players);
       return { ...state, players: action.players };
@@ -443,10 +518,12 @@ function reducer(state: GameState, action: Action): GameState {
 
     case "RESET": {
       const savedRoster = loadSavedRoster();
+      const cfg = AGE_GROUP_CONFIG[state.ageGroup];
       return {
         screen: "setup",
+        ageGroup: state.ageGroup,
         players: savedRoster,
-        settings: DEFAULT_SETTINGS,
+        settings: { ...DEFAULT_SETTINGS, fieldSize: cfg.fieldSize, totalMinutes: cfg.defaultDuration },
         elapsedSeconds: 0,
         isRunning: false,
         completedWindows: [],
@@ -483,6 +560,7 @@ interface GameContextValue {
   reset: () => void;
   incrementScore: (team: "us" | "them") => void;
   decrementScore: (team: "us" | "them") => void;
+  selectAgeGroup: (group: AgeGroup) => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -632,6 +710,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
   const endGame = useCallback(() => dispatch({ type: "END_GAME" }), []);
   const reset = useCallback(() => dispatch({ type: "RESET" }), []);
+  const selectAgeGroup = useCallback(
+    (group: AgeGroup) => dispatch({ type: "SELECT_AGE_GROUP", group }),
+    []
+  );
   const incrementScore = useCallback(
     (team: "us" | "them") => dispatch({ type: "SCORE_INCREMENT", team }),
     []
@@ -659,6 +741,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         reset,
         incrementScore,
         decrementScore,
+        selectAgeGroup,
       }}
     >
       {children}
