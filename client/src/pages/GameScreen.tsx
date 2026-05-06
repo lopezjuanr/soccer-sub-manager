@@ -10,7 +10,7 @@
  * - No other action restarts the clock.
  */
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { useGame } from "@/contexts/GameContext";
 import {
@@ -167,6 +167,8 @@ export default function GameScreen() {
   const [selectedOut, setSelectedOut] = useState<Set<string>>(new Set());
   const [selectedIn, setSelectedIn] = useState<Set<string>>(new Set());
   const [endConfirmOpen, setEndConfirmOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showFade, setShowFade] = useState(false);
 
   const {
     players,
@@ -184,6 +186,18 @@ export default function GameScreen() {
 
   // Keep the screen awake for the entire game session
   useWakeLock(state.screen === "game");
+
+  // Scroll detection for fade gradient
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const check = () => setShowFade(el.scrollHeight > el.clientHeight && el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+    check();
+    el.addEventListener("scroll", check);
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", check); ro.disconnect(); };
+  }, [players.length]);
 
   const onField = players.filter((p) => p.status === "on");
   const bench = players.filter((p) => p.status === "off");
@@ -440,7 +454,8 @@ export default function GameScreen() {
       </div>
 
       {/* Player cards — only this section scrolls */}
-      <div className="flex-1 px-4 pt-4 pb-6 space-y-5 overflow-y-auto overscroll-contain">
+      <div className="relative flex-1 min-h-0">
+        <div ref={scrollRef} className="h-full px-4 pt-4 pb-6 space-y-5 overflow-y-auto overscroll-contain">
         {/* On Field */}
         <section>
           <h2
@@ -488,6 +503,14 @@ export default function GameScreen() {
               ))}
             </div>
           </section>
+        )}
+        </div>
+        {/* Fade-to-dark gradient — only shown when content overflows */}
+        {showFade && (
+          <div
+            className="pointer-events-none absolute bottom-0 left-0 right-0 h-12"
+            style={{ background: "linear-gradient(to bottom, transparent, #0d1117)" }}
+          />
         )}
       </div>
 
