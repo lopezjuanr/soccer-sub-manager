@@ -241,9 +241,9 @@ export default function GameScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1117] flex flex-col">
-      {/* Header */}
-      <div className="bg-[#0d1117] border-b border-white/8 px-4 py-3 sticky top-0 z-20">
+    <div className="h-screen bg-[#0d1117] flex flex-col overflow-hidden">
+      {/* Header — fixed, never scrolls */}
+      <div className="bg-[#0d1117] border-b border-white/8 px-4 py-3 shrink-0 z-20">
         <div className="flex items-center justify-between">
           <div>
             <h1
@@ -380,68 +380,67 @@ export default function GameScreen() {
             <Flag size={16} />
           </Button>
         </div>
-      </div>
-
-      {/* ── Halftime Banner ── */}
-      <AnimatePresence>
-        {atHalftime && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25 }}
-            className="mx-4 mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-4"
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
-                <Clock size={18} className="text-amber-400" />
+        {/* ── Halftime Banner (inside fixed header) ── */}
+        <AnimatePresence>
+          {atHalftime && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25 }}
+              className="mt-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-4"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+                  <Clock size={18} className="text-amber-400" />
+                </div>
+                <div>
+                  <p
+                    className="text-amber-300 font-bold text-base leading-tight"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    Half Time — Clock Stopped
+                  </p>
+                  <p
+                    className="text-amber-400/60 text-xs mt-0.5"
+                    style={{ fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    {bench.length === 0
+                      ? "No bench players — continue when ready"
+                      : "Make a substitution to start the second half"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p
-                  className="text-amber-300 font-bold text-base leading-tight"
+              {bench.length === 0 ? (
+                <Button
+                  onClick={() => confirmHalftimeSub([], [])}
+                  className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#0d1117] font-bold text-sm mt-1"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  Half Time — Clock Stopped
-                </p>
-                <p
-                  className="text-amber-400/60 text-xs mt-0.5"
-                  style={{ fontFamily: "'DM Sans', sans-serif" }}
+                  <Flag size={16} className="mr-2" />
+                  Continue to 2nd Half
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    setSelectedOut(new Set());
+                    setSelectedIn(new Set());
+                    setManualSubOpen(true);
+                  }}
+                  className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#0d1117] font-bold text-sm mt-1"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
-                  {bench.length === 0
-                    ? "No bench players — continue when ready"
-                    : "Make a substitution to start the second half"}
-                </p>
-              </div>
-            </div>
-            {bench.length === 0 ? (
-              <Button
-                onClick={() => confirmHalftimeSub([], [])}
-                className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#0d1117] font-bold text-sm mt-1"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                <Flag size={16} className="mr-2" />
-                Continue to 2nd Half
-              </Button>
-            ) : (
-              <Button
-                onClick={() => {
-                  setSelectedOut(new Set());
-                  setSelectedIn(new Set());
-                  setManualSubOpen(true);
-                }}
-                className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#0d1117] font-bold text-sm mt-1"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                <ArrowLeftRight size={16} className="mr-2" />
-                Make Substitution
-              </Button>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+                  <ArrowLeftRight size={16} className="mr-2" />
+                  Make Substitution
+                </Button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
-      {/* Player cards */}
-      <div className="flex-1 px-4 pt-4 pb-6 space-y-5 overflow-y-auto">
+      {/* Player cards — only this section scrolls */}
+      <div className="flex-1 px-4 pt-4 pb-6 space-y-5 overflow-y-auto overscroll-contain">
         {/* On Field */}
         <section>
           <h2
