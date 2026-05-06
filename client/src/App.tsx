@@ -1,3 +1,4 @@
+import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -6,6 +7,7 @@ import SplashScreen from "./pages/SplashScreen";
 import SetupScreen from "./pages/SetupScreen";
 import GameScreen from "./pages/GameScreen";
 import SummaryScreen from "./pages/SummaryScreen";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 function AppScreenRouter() {
@@ -21,10 +23,18 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
-          <GameProvider>
-            <Toaster />
-            <AppScreenRouter />
-          </GameProvider>
+          <Switch>
+            {/* Standalone privacy policy page — no game context needed */}
+            <Route path="/privacy" component={PrivacyPolicy} />
+
+            {/* Main app — all other routes go through the game state router */}
+            <Route>
+              <GameProvider>
+                <Toaster />
+                <AppScreenRouter />
+              </GameProvider>
+            </Route>
+          </Switch>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

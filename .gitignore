@@ -110,3 +110,6 @@ temp/
 
 # Manus dev logs (local only)
 .manus-logs/
+
+# Android native project (built separately via Android Studio)
+android/
