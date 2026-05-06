@@ -121,6 +121,7 @@ function saveRoster(group: AgeGroup, players: Player[]) {
 
 interface GameSnapshot {
   screen: AppScreen;
+  ageGroup: AgeGroup;
   players: Player[];
   settings: GameSettings;
   elapsedSeconds: number;
@@ -129,6 +130,8 @@ interface GameSnapshot {
   subDialogOpen: boolean;
   activeWindow: SubWindow | null;
   atHalftime: boolean;
+  scoreUs: number;
+  scoreThem: number;
   /** Wall-clock ms when the clock was last started/resumed. Null when paused. */
   clockAnchorMs: number | null;
 }
@@ -141,6 +144,7 @@ function saveGameSnapshot(state: GameState, clockAnchorMs: number | null) {
   try {
     const snap: GameSnapshot = {
       screen: state.screen,
+      ageGroup: state.ageGroup,
       players: state.players,
       settings: state.settings,
       elapsedSeconds: state.elapsedSeconds,
@@ -149,6 +153,8 @@ function saveGameSnapshot(state: GameState, clockAnchorMs: number | null) {
       subDialogOpen: state.subDialogOpen,
       activeWindow: state.activeWindow,
       atHalftime: state.atHalftime,
+      scoreUs: state.scoreUs,
+      scoreThem: state.scoreThem,
       clockAnchorMs,
     };
     localStorage.setItem(GAME_KEY, JSON.stringify(snap));
@@ -199,6 +205,7 @@ function loadGameSnapshot(): Partial<GameState> | null {
       clearGameSnapshot();
       return {
         screen: "summary",
+        ageGroup: snap.ageGroup ?? "8u",
         players,
         settings: snap.settings,
         elapsedSeconds: totalSec,
@@ -208,13 +215,14 @@ function loadGameSnapshot(): Partial<GameState> | null {
         subDialogOpen: false,
         activeWindow: null,
         atHalftime: false,
-        scoreUs: 0,
-        scoreThem: 0,
+        scoreUs: snap.scoreUs ?? 0,
+        scoreThem: snap.scoreThem ?? 0,
       };
     }
 
     return {
       screen: snap.screen,
+      ageGroup: snap.ageGroup ?? "8u",
       players: snap.players,
       settings: snap.settings,
       elapsedSeconds,
@@ -225,6 +233,8 @@ function loadGameSnapshot(): Partial<GameState> | null {
       subDialogOpen: false,
       activeWindow: null,
       atHalftime: snap.atHalftime ?? false,
+      scoreUs: snap.scoreUs ?? 0,
+      scoreThem: snap.scoreThem ?? 0,
     };
   } catch {
     return null;
@@ -606,6 +616,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     state.activeWindow,
     state.settings,
     state.atHalftime,
+    state.scoreUs,
+    state.scoreThem,
+    state.ageGroup,
   ]);
 
   // ── Halftime auto-pause ──
