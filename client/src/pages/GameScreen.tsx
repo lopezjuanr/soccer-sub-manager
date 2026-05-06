@@ -38,6 +38,12 @@ import {
   Clock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 function formatTime(seconds: number) {
@@ -363,22 +369,42 @@ export default function GameScreen() {
 
         {/* Timer controls */}
         <div className="flex gap-2 mt-3">
-          <Button
-            onClick={() => {
-              setSelectedOut(new Set());
-              setSelectedIn(new Set());
-              setManualSubOpen(true);
-            }}
-            className={`flex-1 h-10 rounded-xl text-sm font-semibold ${
-              atHalftime
-                ? "bg-amber-500 hover:bg-amber-400 text-[#0d1117]"
-                : "bg-white/8 hover:bg-white/15 text-white"
-            }`}
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            <ArrowLeftRight size={16} className="mr-1.5" />
-            {atHalftime ? "Make Sub to Resume" : "Sub"}
-          </Button>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {/* span wrapper needed so tooltip works on a disabled button */}
+                <span className="flex-1">
+                  <Button
+                    disabled={bench.length === 0 && !atHalftime}
+                    onClick={() => {
+                      setSelectedOut(new Set());
+                      setSelectedIn(new Set());
+                      setManualSubOpen(true);
+                    }}
+                    className={`w-full h-10 rounded-xl text-sm font-semibold ${
+                      bench.length === 0 && !atHalftime
+                        ? "bg-white/4 text-white/25 cursor-not-allowed"
+                        : atHalftime
+                        ? "bg-amber-500 hover:bg-amber-400 text-[#0d1117]"
+                        : "bg-white/8 hover:bg-white/15 text-white"
+                    }`}
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    <ArrowLeftRight size={16} className="mr-1.5" />
+                    {atHalftime ? "Make Sub to Resume" : "Sub"}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {bench.length === 0 && !atHalftime && (
+                <TooltipContent
+                  side="top"
+                  className="bg-[#1a2030] border border-white/10 text-white/80 text-xs px-3 py-1.5 rounded-lg"
+                >
+                  No bench players available
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
           <Button
             onClick={skipToNextWindow}
             title="Demo: skip to halftime"
