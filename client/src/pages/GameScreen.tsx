@@ -261,7 +261,7 @@ export default function GameScreen() {
   }
 
   return (
-    <div className="h-screen bg-[#0d1117] flex flex-col overflow-hidden">
+    <div className="bg-[#0d1117] flex flex-col overflow-hidden" style={{ height: '100dvh', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Header — fixed, never scrolls */}
       <div className="bg-[#0d1117] border-b border-white/8 px-4 py-3 shrink-0 z-20">
         <div className="flex items-center justify-between">
