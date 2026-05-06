@@ -18,7 +18,7 @@ function formatMinSec(totalMinutes: number) {
 
 export default function SummaryScreen() {
   const { state, reset } = useGame();
-  const { players, settings } = state;
+  const { players, settings, scoreUs, scoreThem } = state;
   const sorted = [...players].sort((a, b) => b.minutesPlayed - a.minutesPlayed);
   const minTotalMinutes = Math.round(settings.totalMinutes / 2);
   const allMetMinimum = sorted.every((p) => p.minutesPlayed >= minTotalMinutes);
@@ -75,6 +75,42 @@ export default function SummaryScreen() {
 
 
         </div>
+
+        {/* Final Score */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="mt-5 flex items-center justify-center gap-0"
+        >
+          <div className="flex flex-col items-center px-6 py-3 bg-white/5 rounded-l-2xl border border-white/10">
+            <span
+              className="text-xs font-bold uppercase tracking-widest text-white/40 mb-1"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >Us</span>
+            <span
+              className={`text-5xl font-black tabular-nums leading-none ${
+                scoreUs > scoreThem ? "text-[#a3e635]" : scoreUs < scoreThem ? "text-white/40" : "text-white"
+              }`}
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >{scoreUs}</span>
+          </div>
+          <div className="flex items-center justify-center px-4 py-3 bg-white/3 border-t border-b border-white/10 self-stretch">
+            <span className="text-white/25 text-2xl font-light">—</span>
+          </div>
+          <div className="flex flex-col items-center px-6 py-3 bg-white/5 rounded-r-2xl border border-white/10">
+            <span
+              className="text-xs font-bold uppercase tracking-widest text-white/40 mb-1"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >Them</span>
+            <span
+              className={`text-5xl font-black tabular-nums leading-none ${
+                scoreThem > scoreUs ? "text-red-400" : scoreThem < scoreUs ? "text-white/40" : "text-white"
+              }`}
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >{scoreThem}</span>
+          </div>
+        </motion.div>
       </div>
 
       {/* Playing time table */}
