@@ -241,7 +241,7 @@ export default function GameScreen() {
   }
 
   return (
-    <div className="h-screen bg-[#0d1117] flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-[#0d1117] flex flex-col">
       {/* Header */}
       <div className="bg-[#0d1117] border-b border-white/8 px-4 py-3 sticky top-0 z-20">
         <div className="flex items-center justify-between">
